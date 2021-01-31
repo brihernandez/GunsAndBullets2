@@ -99,7 +99,7 @@ namespace GNB
         private void Update()
         {
             if (!FireInFixed)
-                FireShot(InheritedVelocity);
+                AttemptFireShot(InheritedVelocity);
         }
 
         private void FixedUpdate()
@@ -108,7 +108,7 @@ namespace GNB
                 InheritedVelocity = Rigidbody.velocity;
 
             if (FireInFixed && IsFiring)
-                FireShot(InheritedVelocity);
+                AttemptFireShot(InheritedVelocity);
         }
 
         /// <summary>
@@ -191,22 +191,19 @@ namespace GNB
         }
 
         /// <summary>
-        /// Fire a single shot.
+        /// Fire a single shot. Automatically takes into account inherited velocity.
         /// </summary>
         /// <remarks>For automatic fire, use <see cref="IsFiring"/>.</remarks>
-        public void FireShot()
+        /// <returns><see langword="true"/> if the shot was fired successfully.</returns>
+        public bool FireSingleShot()
         {
-            FireShot(InheritedVelocity);
+            return AttemptFireShot(InheritedVelocity);
         }
 
-        /// <summary>
-        /// Fire a single shot.
-        /// </summary>
-        /// <remarks>For automatic fire, use <see cref="IsFiring"/>.</remarks>
-        public void FireShot(Vector3 inheritedVelocity)
+        private bool AttemptFireShot(Vector3 inheritedVelocity)
         {
             if (!ReadyToFire)
-                return;
+                return false;
 
             if (IsSequentialFiring)
             {
@@ -228,6 +225,7 @@ namespace GNB
             }
 
             lastShotTime = Time.time;
+            return true;
         }
 
         private void FireBulletFromBarrel(Transform barrel, Vector3 velocity)

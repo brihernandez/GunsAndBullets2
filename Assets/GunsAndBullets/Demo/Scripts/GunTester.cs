@@ -23,7 +23,7 @@ namespace GNB.Demo
                         gun.UseGimballedAiming = false;
                     }
 
-                    gun.FireShot();
+                    gun.FireSingleShot();
                 }
             }
         }

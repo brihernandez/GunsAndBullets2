@@ -28,7 +28,7 @@ You can either clone the repository or [download the asset package](./GunsAndBul
 
 ![](Screenshots/gunproperties.png)
 
-The guns themselves are pretty straightforward. They fire automatically at a set rate of fire as long as `IsFiring` is set to true. If only a single shot is desired, the `FireShot` function can be used.
+The guns themselves are pretty straightforward. They fire automatically at a set rate of fire as long as `IsFiring` is set to true. If only a single shot is desired, the `FireSingleShot` function can be used.
 
 Using `GetPredictedImpactPoint`, the exact path of a bullet can be predicted. See [Prediction](#Prediction) for more information.
 
@@ -103,17 +103,13 @@ This project contains many special little features that I've come to find useful
 
 An optional feature that I often find myself repeatedly implementing is gimballing guns. The idea behind this is to allow the gun to hit a precise point without necessarily aiming the gun directly at that point. This is very useful for things such as auto-aim, AI controlled weapons, and ensuring that guns converge on a crosshair.
 
-##### `UseGimballedAiming`
-Set this to property to `true` to enable gimballed aiming.
+Set `UseGimballedAiming` to `true` to enable gimballed aiming.
 
-##### `GimbalTarget`
-When `UseGimballedAiming` is set to `true`, the gun will try to fire bullets at whatever position `GimbalTarget` currently has.
+`GimbalTarget` is the position the gun will try to fire bullets at when gimballing is enabled.
 
-##### `GimbalRange`
-The maximum degrees off boresight that the gun can gimbal bullets towards.
+`GimbalRange` is the maximum degrees off boresight that the gun can gimbal bullets towards.
 
-##### `GimbalOnlyWhenInRange`
-Sometimes you might not want the gun to aim at the `GimbalTarget` unless it is within the `GimbalRange`. In those cases, set this property to `true`.
+Set `GimbalOnlyWhenInRange` iif you want the gun to aim at `GimbalTarget` **only** when it is within the `GimbalRange`.
 
 ## Thick Bullets
 ![Thick](Screenshots/thickdemo.gif)
@@ -122,20 +118,16 @@ Another optional feature of bullets is to use "thick bullets." Rather than point
 
 Aside from being used to simulate large bullets (such as a cannon ball), it can be also be used to exaggerate the size of hitboxes to make hitting small and fast targets easier for the player.
 
-**Thick hit detection is only done against objects on the layers defined by `TargetLayers`!**
+**Thick hit detection is only done against objects on the layers defined by `ThickHitLayers`!**
 
 ![ThickDebug](Screenshots/thickbullets.png)
 
-##### `IsThick`
-When this is checked, thick bullet hit detection is used.
+Set `IsThick` to enable thick bullet hit detection using the diameter set by `BulletDiameter`.
 
-##### `BulletDiameter`
-Diameter of the bullet.
+#### Setting the Layers
+`ThickHitLayers` are the layers that thick hit detection is used for. This is **separate** from normal hit detection for game design and optimization reasons. When thick bullets use the same hit detection as everything else, they will get caught on terrain or the environment in sometimes undesirable ways. Thick bullets using separate hit detection allows them to do the SphereCasts only for relevant objects (e.g. hitboxes).
 
-##### `TargetLayers`
-These are the layers that thick hit detection is used for. This is separate from normal hit detection for game design and optimization reasons. When thick bullets use the same hit detection as everything else, they will get caught on terrain or the environment in sometimes undesirable ways. Thick bullets using separate hit detection allows them to do the SphereCasts only for relevant objects (e.g. hitboxes).
-
-Keep in mind that the SphereCasts are done **in addition** to normal bullet hit detection. If you'd like all hit detection to be done thick, then make sure to set the `LayerToHit` mask to `Nothing`.
+Keep in mind that the SphereCasts are done **in addition** to normal bullet hit detection. If you'd like all hit detection to be done thick, then make sure to set the `RayHitLayers` mask to `Nothing`.
 
 ## Prediction
 ![Prediction](Screenshots/predictiondemo.gif)
@@ -171,10 +163,11 @@ while (simTime < maxSimTime && !willHitSomething)
 ## Automatically Inherit Velocity
 ![Inheritance](Screenshots/inheritancedemo.gif)
 
-##### `AutoInheritVelocity`
-By default, a `Gun` will try to get a `Rigidbody` in its parent to use for inheriting velocity. Inheriting the velocity of the parent is realistic, but can be undesirable for some cases, so this is left optional.
+Set `AutoInheritVelocity` to `true` to enable fired bullets from a gun inheriting the velocity of their gun's parent.
 
-If you have a specific value you'd like to use for inherited velocity, or you are **not** using a Rigidbody, the inherited velocity used when firing a `Gun` can be manually overridden by setting the public `InheritedVelocity` property.
+Velocity inheritance is accomplished by getting the `Rigidbody` in its parent. Inheriting velocity is realistic, but can be undesirable in some cases, so this is left optional.
+
+If you have a specific value you'd like to use for inherited velocity, or you are **not** using a `Rigidbody`, the inherited velocity can be manually overridden by setting the public `InheritedVelocity` property.
 
 ## Ignoring Collision with Objects
 ![Ignore](Screenshots/ignorecollision.gif)

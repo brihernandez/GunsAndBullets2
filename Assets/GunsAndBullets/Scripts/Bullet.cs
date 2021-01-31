@@ -6,27 +6,37 @@ namespace GNB
     public class Bullet : MonoBehaviour
     {
         [Header("Prefabs")]
+        [Tooltip("Effect played when the bullet impacts something.")]
         [SerializeField] private ParticleSystem ImpactFXPrefab = null;
+        [Tooltip("Effect played when the bullet explodes.")]
         [SerializeField] private ParticleSystem ExplodeFXPrefab = null;
+        [Tooltip("Any trails listed here will be cleaned up nicely on the bullet's destruction. " +
+            "Used to prevent unsightly deleted trails.")]
         [SerializeField] private List<TrailRenderer> ChildTrails = new List<TrailRenderer>();
 
         [Header("Motion")]
+        [Tooltip("Layers the bullet will normally hit")]
+        public LayerMask RayHitLayers = -1;
+        [Tooltip("How long (seconds) the bullet lasts")]
         public float TimeToLive = 5f;
+        [Tooltip("Gravity applied to the bullet where 1 is normal gravity.")]
         public float GravityModifier = 0f;
+        [Tooltip("When true, the bullet automatically aligns itself to its velocity. Useful in arcing motions.")]
         public bool AlignToVelocity = false;
+        [Tooltip("This should be set to true when using physics based projects.")]
         [SerializeField] private bool MoveInFixedUpdate = true;
+
+        [Header("Thick Bullets")]
+        [Tooltip("Use thick hit detection for the bullet. This is run in addition to normal hit detection.")]
+        public bool IsThick = false;
+        [Tooltip("The layers the bullet will hit using thick hit detection.")]
+        public LayerMask ThickHitLayers = 0;
+        [Tooltip("Used only when thick hit detection is enabled.")]
+        public float BulletDiameter = 1f;
 
         [Header("Explosions")]
         public bool ExplodeOnImpact = false;
         public bool ExplodeOnTimeout = false;
-
-        [Header("Hit Detection")]
-        public LayerMask LayersToHit = -1;
-
-        [Header("Thick Bullets")]
-        public bool IsThick = false;
-        public LayerMask TargetLayers = 0;
-        public float BulletDiameter = 1f;
 
 #if UNITY_EDITOR
         [Header("Debug")]
@@ -150,13 +160,25 @@ namespace GNB
         }
 
         /// <summary>
+        /// Explodes the bullet. Typically used for air bursting explosive weapons.
+        /// </summary>
+        public void ExplodeBullet(Vector3 explodePosition, Quaternion explodeRotation)
+        {
+            if (ExplodeFXPrefab != null)
+                Instantiate(ImpactFXPrefab, explodePosition, explodeRotation).Play();
+
+            HandleExplosionDamage(explodePosition);
+
+            CleanUpTrails();
+            Destroy(gameObject);
+        }
+
+        /// <summary>
         /// Destroys the bullet as if it hit something.
         /// </summary>
         public void DestroyBulletFromImpact(Vector3 impactedPoint, Quaternion impactRotation)
         {
-            if (ExplodeOnImpact && ExplodeFXPrefab != null)
-                Instantiate(ExplodeFXPrefab, impactedPoint, impactRotation).Play();
-            else if (ImpactFXPrefab != null)
+            if (ImpactFXPrefab != null)
                 Instantiate(ImpactFXPrefab, impactedPoint, impactRotation).Play();
 
             CleanUpTrails();
@@ -168,20 +190,6 @@ namespace GNB
         /// </summary>
         public void DestroyBulletSilently()
         {
-            CleanUpTrails();
-            Destroy(gameObject);
-        }
-
-        /// <summary>
-        /// Explodes the bullet. Typically used for air bursting explosive weapons.
-        /// </summary>
-        public void ExplodeBullet(Vector3 explodePosition, Quaternion explodeRotation)
-        {
-            if (ExplodeFXPrefab != null)
-                Instantiate(ImpactFXPrefab, explodePosition, explodeRotation).Play();
-
-            HandleExplosionDamage(explodePosition);
-
             CleanUpTrails();
             Destroy(gameObject);
         }
@@ -203,7 +211,11 @@ namespace GNB
                 {
                     HandleImpactDamage(hitInfo);
                     HandleExplosionDamage(hitInfo.point);
-                    DestroyBulletFromImpact(hitInfo.point, transform.rotation);
+
+                    if (ExplodeOnImpact)
+                        ExplodeBullet(hitInfo.point, transform.rotation);
+                    else
+                        DestroyBulletFromImpact(hitInfo.point, transform.rotation);
                 }
                 else
                 {
@@ -257,7 +269,7 @@ namespace GNB
                 radius: BulletDiameter * .5f,
                 maxDistance: velocity.magnitude * deltaTime,
                 results: raycastHits,
-                layerMask: TargetLayers);
+                layerMask: ThickHitLayers);
 
             var (bulletHitSomething, closestHit) = GetClosestValidHit(raycastHits, hitCount);
             if (!bulletHitSomething)
@@ -270,7 +282,7 @@ namespace GNB
                     origin: position,
                     direction: velocity.normalized,
                     maxDistance: velocity.magnitude * deltaTime,
-                    layerMask: LayersToHit,
+                    layerMask: RayHitLayers,
                     results: raycastHits);
 
                 (bulletHitSomething, closestHit) = GetClosestValidHit(raycastHits, hitCount);
@@ -285,7 +297,7 @@ namespace GNB
                 origin: position,
                 direction: velocity,
                 maxDistance: velocity.magnitude * deltaTime,
-                layerMask: TargetLayers | LayersToHit,
+                layerMask: ThickHitLayers | RayHitLayers,
                 results: raycastHits);
 
             return GetClosestValidHit(raycastHits, hitCount);
