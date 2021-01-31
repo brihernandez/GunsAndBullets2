@@ -1,0 +1,15 @@
+fileFormatVersion: 2
+guid: fd03ee66d977ab24aaa93d7063eb2b47
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - ImpactFXPrefab: {fileID: 198050975068896738, guid: 766fd4072aff0774191c285677f08ec0,
+      type: 3}
+  - ExplodeFXPrefab: {fileID: 198050975068896738, guid: 766fd4072aff0774191c285677f08ec0,
+      type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
