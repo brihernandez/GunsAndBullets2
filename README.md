@@ -49,7 +49,7 @@ As with the bullets, I feel this component is generic enough to cover 90% of the
 
 1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple barrels at the same time. 
 
-If you start running into this limitation, you should also consider if you really *need* that many bullets flying in the air, as ultra-high rates of fire coming from enough games can saturate a game with enough raycasts to slow it down.
+If you start running into this limitation, you should also consider if you really *need* that many bullets flying in the air, as ultra-high rates of fire coming from enough guns can saturate a game with enough raycasts to slow it down.
 
 # Bullets
 ![Bullets](Screenshots/bulletproperties.png)
