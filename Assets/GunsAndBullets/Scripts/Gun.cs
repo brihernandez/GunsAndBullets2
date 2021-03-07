@@ -3,57 +3,118 @@ using System.Collections.Generic;
 
 namespace GNB
 {
+    public class GunBarrel
+    {
+        public float RecoilLength = 0.3f;
+        public float RecoverSpeed = 1f;
+
+        private Transform barrel = null;
+        private Vector3 startLocalPosition = Vector3.zero;
+        private float recoil = 0f;
+
+        public GunBarrel(Transform barrel, float recoilLength, float recoverSpeed)
+        {
+            this.barrel = barrel;
+            RecoilLength = recoilLength;
+            RecoverSpeed = recoverSpeed;
+            startLocalPosition = this.barrel.localPosition;
+        }
+
+        public void FireRecoil()
+        {
+            recoil = RecoilLength;
+        }
+
+        public void ResetBarrelOverTime(float deltaTime)
+        {
+            recoil = Mathf.MoveTowards(recoil, 0f, RecoverSpeed * deltaTime);
+
+            // This means that when a barrel is fully reset it'll never be EXACTLY
+            // back at where it started, but this distance should be small enough
+            // that hopefully it won't be noticeable.
+            if (recoil > 0f)
+                barrel.transform.localPosition = startLocalPosition + (Vector3.back * recoil);
+        }
+    }
+
     public class Gun : MonoBehaviour
     {
         [Header("Ballistics")]
+
         [Tooltip("Time (s) between each shot.")]
         public float FireDelay = .2f;
+
         [Tooltip("Speed (m/s) that the bullet is fired from the barrel.")]
         public float MuzzleVelocity = 200f;
+
         [Tooltip("Amount of spread the gun has. Higher values result in more spread.")]
         public float Deviation = .1f;
+
         [Tooltip("Automatically inherit the velocity of a parent Rigidbody when firing bullets.")]
         public bool AutoInheritVelocity = true;
 
         [Header("Gimballing")]
+
         [Tooltip("When true, gun will try to gimbal towards the given target position.")]
         public bool UseGimballedAiming = false;
+
         [Tooltip("When true, the gun will gimbal towards the target ONLY when the target is within gimbal range.")]
         public bool GimbalOnlyWhenInRange = false;
+
         [Tooltip("How much the gun is allowed to gimbal. Use SetGimbal")]
         [Range(0f, 180f)] public float GimbalRange = 10f;
+
         [Tooltip("Position gun will try to fire bullets towards.")]
         public Vector3 GimbalTarget = Vector3.zero;
 
-        [Header("Barrels")]
-        [Tooltip("Cycle between barrels when firing rather than firing from all at once.")]
-        public bool IsSequentialFiring = false;
-        [Tooltip("Where bullets will be fired from. When left blank, this component's transform is used.")]
-        [SerializeField] private List<Transform> Barrels = new List<Transform>();
+        [Header("Fire Points")]
 
-        [Header("Cycling")]
+        [Tooltip("Cycle between fire points when firing rather than firing from all at once.")]
+        public bool IsSequentialFiring = false;
+
+        [Tooltip("Where bullets will be fired from. When left blank, this component's transform is used.")]
+        [UnityEngine.Serialization.FormerlySerializedAs("Barrels")]
+        [SerializeField] private List<Transform> FirePoints = new List<Transform>();
+
+        [Header("Barrel Visuals")]
+
+        [Tooltip("How far back (m) the barrel gets pushed back when fired.")]
+        public float RecoilLength = 0.3f;
+
+        [Tooltip("How quickly (m/s) the barrel moves back towards its resting position.")]
+        public float RecoilRecoverSpeed = 1f;
+
+        [Tooltip("The list of the barrels used for visually recoiling barrels. This list of barrels should map 1:1 with fire points.")]
+        [SerializeField] private List<Transform> RecoilingBarrels = new List<Transform>();
 
         [Header("Firing")]
+
         public Bullet BulletPrefab = null;
+
         [SerializeField] private ParticleSystem MuzzleFlashPrefab = null;
         [Tooltip("Fire bullets from FixedUpdate. If using a physics based project, this should usually be set to true.")]
         public bool FireInFixed = true;
+
         [Tooltip("Set to true to fire the gun automatically.")]
         public bool IsFiring = false;
+
         [Tooltip("Bullets automatically ignore the parent rigidbody to prevent self-collision.")]
         public bool IgnoreOwnRigidbody = true;
 
         [Header("Ammo")]
+
         public bool UseAmmo = false;
+
         public int MaxAmmo = 300;
 
-        private Dictionary<Transform, ParticleSystem> barrelToMuzzleFlash = new Dictionary<Transform, ParticleSystem>();
-        private Queue<Transform> barrelQueue = new Queue<Transform>();
+        private Dictionary<Transform, ParticleSystem> firePointToMuzzleFlash = new Dictionary<Transform, ParticleSystem>();
+        private List<GunBarrel> barrelVisuals = new List<GunBarrel>();
 
         private List<Rigidbody> ignoredRigidbodies = new List<Rigidbody>();
         private List<Collider> ignoredColliders = new List<Collider>();
 
         private float lastShotTime = -float.MaxValue;
+        private int firePointIndex = 0;
 
         public Rigidbody Rigidbody { get; private set; } = null;
         public bool HasRigidbody { get; private set; } = false;
@@ -74,32 +135,55 @@ namespace GNB
             Rigidbody = GetComponentInParent<Rigidbody>();
             HasRigidbody = Rigidbody != null;
 
-            if (Barrels.Count == 0)
+            if (FirePoints.Count == 0)
             {
-                // If no barrels were assigned, fall back on self as a barrel.
-                RegisterBarrel(transform);
+                // If no fire points were assigned, fall back on self as a barrel.
+                RegisterFirePoint(transform);
             }
             else
             {
-                foreach (var barrelTransform in Barrels)
-                    RegisterBarrel(barrelTransform);
+                foreach (var firePoint in FirePoints)
+                    RegisterFirePoint(firePoint);
+            }
+
+            if (RecoilingBarrels.Count > 0)
+            {
+                foreach (var barrel in RecoilingBarrels)
+                    RegisterRecoilingBarrel(barrel);
             }
         }
 
-        private void RegisterBarrel(Transform barrelTransform)
+        private void RegisterFirePoint(Transform firePoint)
         {
-            barrelQueue.Enqueue(barrelTransform);
+            if (firePoint == null)
+                return;
+
             if (MuzzleFlashPrefab != null)
             {
-                var muzzleFlash = Instantiate(MuzzleFlashPrefab, barrelTransform, false);
-                barrelToMuzzleFlash.Add(barrelTransform, muzzleFlash);
+                var muzzleFlash = Instantiate(MuzzleFlashPrefab, firePoint, false);
+                firePointToMuzzleFlash.Add(firePoint, muzzleFlash);
             }
+        }
+
+        private void RegisterRecoilingBarrel(Transform barrel)
+        {
+            if (barrel == null)
+                return;
+
+            var recoilingBarrel = new GunBarrel(barrel, RecoilLength, RecoilRecoverSpeed);
+            barrelVisuals.Add(recoilingBarrel);
         }
 
         private void Update()
         {
             if (!FireInFixed)
-                AttemptFireShot(InheritedVelocity);
+            {
+                if (IsFiring)
+                    AttemptFireShot(InheritedVelocity);
+
+                foreach (var barrel in barrelVisuals)
+                    barrel.ResetBarrelOverTime(Time.deltaTime);
+            }
         }
 
         private void FixedUpdate()
@@ -107,8 +191,14 @@ namespace GNB
             if (HasRigidbody && AutoInheritVelocity)
                 InheritedVelocity = Rigidbody.velocity;
 
-            if (FireInFixed && IsFiring)
-                AttemptFireShot(InheritedVelocity);
+            if (FireInFixed)
+            {
+                if (IsFiring)
+                    AttemptFireShot(InheritedVelocity);
+
+                foreach (var barrel in barrelVisuals)
+                    barrel.ResetBarrelOverTime(Time.deltaTime);
+            }
         }
 
         /// <summary>
@@ -139,12 +229,12 @@ namespace GNB
         public (bool hitSomething, RaycastHit hitInfo) GetPredictedImpactPoint(float timeStep)
         {
             var willHitSomething = false;
-            var barrel = barrelQueue.Peek();
+            var firePoint = FirePoints[firePointIndex % FirePoints.Count];
 
             RaycastHit hitInfo = new RaycastHit();
 
-            var simPosition = barrel.position;
-            var simVelocity = barrel.forward * MuzzleVelocity + InheritedVelocity;
+            var simPosition = firePoint.position;
+            var simVelocity = firePoint.forward * MuzzleVelocity + InheritedVelocity;
 
             var simTime = 0f;
             var maxSimTime = BulletPrefab.TimeToLive;
@@ -207,19 +297,21 @@ namespace GNB
 
             if (IsSequentialFiring)
             {
-                // Cycle between all the barrels.
-                var barrel = barrelQueue.Dequeue();
-                FireBulletFromBarrel(barrel, inheritedVelocity);
+                // Cycle between all the fire points.
+                var firePoint = FirePoints[firePointIndex % FirePoints.Count];
+                FireBulletFromFirePoint(firePoint, inheritedVelocity);
+                firePointIndex += 1;
 
-                barrelQueue.Enqueue(barrel);
                 AmmoCount -= 1;
             }
             else
             {
                 // Fire from all barrels at once.
-                foreach (var barrel in barrelQueue)
+                foreach (var firePoint in FirePoints)
                 {
-                    FireBulletFromBarrel(barrel, inheritedVelocity);
+                    FireBulletFromFirePoint(firePoint, inheritedVelocity);
+                    firePointIndex += 1;
+
                     AmmoCount -= 1;
                 }
             }
@@ -228,9 +320,9 @@ namespace GNB
             return true;
         }
 
-        private void FireBulletFromBarrel(Transform barrel, Vector3 velocity)
+        private void FireBulletFromFirePoint(Transform firePoint, Vector3 velocity)
         {
-            var bullet = Instantiate(BulletPrefab, barrel.transform.position, barrel.transform.rotation);
+            var bullet = Instantiate(BulletPrefab, firePoint.transform.position, firePoint.transform.rotation);
 
             if (IgnoreOwnRigidbody && HasRigidbody)
                 bullet.AddIgnoredRigidbody(Rigidbody);
@@ -241,14 +333,14 @@ namespace GNB
             if (ignoredColliders.Count > 0)
                 bullet.AddIgnoredColliders(ignoredColliders);
 
-            var bulletRotation = barrel.transform.rotation;
+            var bulletRotation = firePoint.transform.rotation;
 
             var isGimballingAllowed = UseGimballedAiming;
             if (isGimballingAllowed && GimbalOnlyWhenInRange)
             {
                 var angleToTarget = Vector3.Angle(
-                    from: GimbalTarget - barrel.position,
-                    to: barrel.forward);
+                    from: GimbalTarget - firePoint.position,
+                    to: firePoint.forward);
 
                 isGimballingAllowed = angleToTarget < GimbalRange;
             }
@@ -257,19 +349,22 @@ namespace GNB
             {
                 bulletRotation = Quaternion.RotateTowards(
                     from: bulletRotation,
-                    to: Quaternion.LookRotation(GimbalTarget - barrel.position, barrel.up),
+                    to: Quaternion.LookRotation(GimbalTarget - firePoint.position, firePoint.up),
                     maxDegreesDelta: GimbalRange);
             }
 
             bullet.Fire(
-                position: barrel.transform.position,
+                position: firePoint.transform.position,
                 rotation: bulletRotation,
                 velocity,
                 MuzzleVelocity,
                 Deviation);
 
-            if (barrelToMuzzleFlash.ContainsKey(barrel))
-                barrelToMuzzleFlash[barrel].Play();
+            if (barrelVisuals.Count > 0)
+                barrelVisuals[firePointIndex % barrelVisuals.Count].FireRecoil();
+
+            if (firePointToMuzzleFlash.ContainsKey(firePoint))
+                firePointToMuzzleFlash[firePoint].Play();
         }
     }
 }

@@ -32,7 +32,7 @@ The guns themselves are pretty straightforward. They fire automatically at a set
 
 Using `GetPredictedImpactPoint`, the exact path of a bullet can be predicted. See [Prediction](#Prediction) for more information.
 
-The gun uses a **Barrel** system to determine where bullets and muzzle flashes are to be placed. This allows for weapons with multiple barrels. If no barrels are assigned (`Barrels` array is left empty), then the gun will fire bullets from whatever `Transform` the `Gun` script is attached to. Barrels can be fired simultaneously, or sequentially.
+The gun uses a **Fire Point** system to determine where bullets and muzzle flashes are to be placed. This allows for weapons with multiple fire points. If no fire points are assigned (`FirePoints` array is left empty), then the gun will fire bullets from whatever `Transform` the `Gun` script is attached to. Fire points can be fired simultaneously, or sequentially.
 
 Ammo can optionally be used to limit the number of shots the gun can fire. To reload a gun to its maximum ammo count, call `ReloadAmmo`.
 
@@ -47,9 +47,20 @@ If the firing object **does not** have a `Rigidbody`, then the `AddIgnoredCollid
 ## Limitations
 As with the bullets, I feel this component is generic enough to cover 90% of the use cases I'm interested in with little to no modification. However, there is one caveat to keep in mind:
 
-1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple barrels at the same time. 
+1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple fire points at the same time. 
 
 If you start running into this limitation, you should also consider if you really *need* that many bullets flying in the air, as ultra-high rates of fire coming from enough guns can saturate a game with enough raycasts to slow it down.
+
+## Recoiling Barrels
+![Recoil](Screenshots/recoil.gif)
+
+Barrels can optionally be configured to recoil upon firing. To enable this feature, add the `Transform` of the barrel object to the `RecoilingBarrels` list.
+
+To work correctly with multiple fire points, make sure to assign this list in the same order as the `FirePoints` list. E.g. if you have a left and right fire point in the `FirePoints` list, add the left and right barrels to `RecoilingBarrels` in that same order.
+
+Upon firing, barrels will translate backwards in the local Z axis.
+
+There are no checks to make sure the barrel gets fully reset after each shot. If the fire rate fast enough that the barrel doesn't have enough time to reset, it'll be continually pushed backwards!
 
 # Bullets
 ![Bullets](Screenshots/bulletproperties.png)
@@ -181,6 +192,10 @@ The `Gun` class contains convenience functions to automatically ignore its own `
 
 
 # Changelog
+
+### 1.1 (Mar 7 2021)
+
+- Lots
 
 ### 1.0 (Jan 31 2021)
 
