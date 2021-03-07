@@ -190,12 +190,15 @@ See [Ignoring Collisions](#Ignoring-Collisions) for more details on usage.
 ##### `IgnoreOwnRigidbody`
 The `Gun` class contains convenience functions to automatically ignore its own `Rigidbody` when firing bullets. If you'd like to shoot yourself, set this property to `false`.
 
-
 # Changelog
 
 ### 1.1 (Mar 7 2021)
 
-- Lots
+- Added optional ability for barrels to recoil from guns
+- Changed the language around such that "fire points" are where bullets come from, "barrels" are visual things that recoil
+- Firing no longer uses queues and instead just cycles indices in order to take up neglibly less resources
+- Fixed bug where setting the gun to use the normal Update (as opposed to FixedUpdate) would result in uncontrolled firing
+- Added new test scene demonstrating the recoiling barrels
 
 ### 1.0 (Jan 31 2021)
 
