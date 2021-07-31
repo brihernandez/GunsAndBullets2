@@ -192,6 +192,10 @@ The `Gun` class contains convenience functions to automatically ignore its own `
 
 # Changelog
 
+### 1.2 (July 30 2021)
+
+- Fixed bug where explosion effect wasn't being called on explosion
+
 ### 1.1 (Mar 7 2021)
 
 - Added optional ability for barrels to recoil from guns

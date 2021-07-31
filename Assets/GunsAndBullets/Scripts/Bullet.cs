@@ -165,7 +165,7 @@ namespace GNB
         public void ExplodeBullet(Vector3 explodePosition, Quaternion explodeRotation)
         {
             if (ExplodeFXPrefab != null)
-                Instantiate(ImpactFXPrefab, explodePosition, explodeRotation).Play();
+                Instantiate(ExplodeFXPrefab, explodePosition, explodeRotation).Play();
 
             HandleExplosionDamage(explodePosition);
 
