@@ -23,6 +23,8 @@ namespace GNB
         public float GravityModifier = 0f;
         [Tooltip("When true, the bullet automatically aligns itself to its velocity. Useful in arcing motions.")]
         public bool AlignToVelocity = false;
+        [Tooltip("Length of bullet assuming the origin is the \"tail\" and a BulletLength's distance forwards is the \"head\".")]
+        public float BulletLength = 1f;
         [Tooltip("This should be set to true when using physics based projects.")]
         [SerializeField] private bool MoveInFixedUpdate = true;
 
@@ -267,7 +269,7 @@ namespace GNB
                 origin: position,
                 direction: velocity.normalized,
                 radius: BulletDiameter * .5f,
-                maxDistance: velocity.magnitude * deltaTime,
+                maxDistance: BulletLength + velocity.magnitude * deltaTime,
                 results: raycastHits,
                 layerMask: ThickHitLayers);
 
@@ -281,7 +283,7 @@ namespace GNB
                 hitCount = Physics.RaycastNonAlloc(
                     origin: position,
                     direction: velocity.normalized,
-                    maxDistance: velocity.magnitude * deltaTime,
+                    maxDistance: BulletLength + velocity.magnitude * deltaTime,
                     layerMask: RayHitLayers,
                     results: raycastHits);
 
@@ -296,7 +298,7 @@ namespace GNB
             int hitCount = Physics.RaycastNonAlloc(
                 origin: position,
                 direction: velocity,
-                maxDistance: velocity.magnitude * deltaTime,
+                maxDistance: BulletLength + velocity.magnitude * deltaTime,
                 layerMask: ThickHitLayers | RayHitLayers,
                 results: raycastHits);
 
@@ -350,6 +352,18 @@ namespace GNB
         {
             if (!ShowDebugVisuals)
                 return;
+
+            Gizmos.matrix = transform.localToWorldMatrix;
+
+            Gizmos.DrawLine(Vector3.right, Vector3.left);
+            Gizmos.DrawLine(Vector3.up, Vector3.down);
+            Gizmos.DrawLine(Vector3.zero, transform.forward * BulletLength);
+
+            var bulletHead = new Vector3(0f, 0f, BulletLength);
+            Gizmos.DrawLine(bulletHead + Vector3.right, bulletHead + Vector3.right);
+            Gizmos.DrawLine(bulletHead + Vector3.up, bulletHead + Vector3.down);
+
+            Gizmos.matrix = Matrix4x4.identity;
 
             if (IsThick)
             {

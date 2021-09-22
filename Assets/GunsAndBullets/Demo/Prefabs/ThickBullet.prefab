@@ -55,6 +55,7 @@ MonoBehaviour:
   TimeToLive: 5
   GravityModifier: 0
   AlignToVelocity: 0
+  BulletLength: 2
   MoveInFixedUpdate: 1
   IsThick: 1
   ThickHitLayers:

@@ -49,19 +49,21 @@ MonoBehaviour:
   ExplodeFXPrefab: {fileID: 198050975068896738, guid: 766fd4072aff0774191c285677f08ec0,
     type: 3}
   ChildTrails: []
+  RayHitLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
   TimeToLive: 5
   GravityModifier: 5
   AlignToVelocity: 1
-  SelfDestructOnTimeout: 0
+  BulletLength: 2
   MoveInFixedUpdate: 1
-  TargetLayers:
-    serializedVersion: 2
-    m_Bits: 1
-  LayersToHit:
-    serializedVersion: 2
-    m_Bits: 16
   IsThick: 1
+  ThickHitLayers:
+    serializedVersion: 2
+    m_Bits: 0
   BulletDiameter: 5
+  ExplodeOnImpact: 0
+  ExplodeOnTimeout: 0
   ShowDebugVisuals: 1
 --- !u!1 &1449103497122844
 GameObject:

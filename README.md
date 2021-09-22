@@ -16,6 +16,7 @@ The goal of this project was to create a sort of "canonical" version of bullet a
 * Bullets can **inherit motion** automatically from a parent Rigidbody
 * Optional ability for bullets to **ignore specific objects** to prevent shooting yourself
 * Optional ability to **self destruct** on timeout
+* Bullets have **length** to them, for more visually accurate hit detection
 
 ![Guns](Screenshots/gundemo.gif)
 
@@ -47,7 +48,7 @@ If the firing object **does not** have a `Rigidbody`, then the `AddIgnoredCollid
 ## Limitations
 As with the bullets, I feel this component is generic enough to cover 90% of the use cases I'm interested in with little to no modification. However, there is one caveat to keep in mind:
 
-1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple fire points at the same time. 
+1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple fire points at the same time.
 
 If you start running into this limitation, you should also consider if you really *need* that many bullets flying in the air, as ultra-high rates of fire coming from enough guns can saturate a game with enough raycasts to slow it down.
 
@@ -88,7 +89,7 @@ The alternative hit detection method. Instead of a raycast, this uses a [SphereC
 For both optimization and game-design purposes, **thick hit detection only checks layers specified in the bullet's `TargetMask` property**. See the [ThickBullets section](#Thick-Bullets) for more details.
 
 ## Damage
-This project **does not** include any kind of damage system. This is implementation specific, so you will need to add your own code for handling damage. There are two convenient places to place handling damage code marked with `//TODO:` comments. 
+This project **does not** include any kind of damage system. This is implementation specific, so you will need to add your own code for handling damage. There are two convenient places to place handling damage code marked with `//TODO:` comments.
 
 ## Explosions
 Using the `ExplodeOnImpact` and `ExplodeOnTimeout` properties, bullets can be set to explode. Functionality for this is very limited, since the exact needs of an explosion system vary depending on the project. As with damage, it is expected for a user to fill in their own code for handling damage.
@@ -190,7 +191,27 @@ See [Ignoring Collisions](#Ignoring-Collisions) for more details on usage.
 ##### `IgnoreOwnRigidbody`
 The `Gun` class contains convenience functions to automatically ignore its own `Rigidbody` when firing bullets. If you'd like to shoot yourself, set this property to `false`.
 
+## Bullet Length
+
+![Length](Screenshots/length.gif)
+
+Since the origin of the bullet GameObject is used for hit detection, it can be useful to offset the hit detection forwards by the length of the bullet, especially for longer bullets. This can prevent the visuals of a bullet from intersecting an object before it counts as a collision. This can also make collision detection *feel* more correct from the player's perspective as a perceived "late" hit can feel unresponsive.
+
+The above image shows an example of what this prevents. The two bullets furthest from the camera have their `BulletLength` value set to the length of their bullets, while the three nearest to the camera use the default value.
+
+To use this correctly:
+
+1. Align the visuals of your bullet such that the "tail" of the bullet is at the origin, and the "head" of the bullet is somewhere in the Z+ direction.
+2. Enable `Show Debug Visuals` to show the bullet length crosses.
+3. Adjust the `BulletLength` property so that the front cross aligns with the front tip of your bullet.
+
+![LengthExample](Screenshots/lengthexample.gif)
+
 # Changelog
+
+### 1.3 (September 22 2021)
+
+- Bullets can now have their hit detection offset by their length
 
 ### 1.2 (July 30 2021)
 
