@@ -415,9 +415,7 @@ MonoBehaviour:
     by default, but this can
     be overridden
 
-    if your model the barrel on a model
-
-    has an unusual axis.'
+    if the the barrel has an unusual axis.'
 --- !u!222 &239645958
 CanvasRenderer:
   m_ObjectHideFlags: 0
