@@ -1142,7 +1142,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Gun: {fileID: 947187199}
   Dummy: {fileID: 1920598276}
-  TimeStep: 0.2
+  Timestep: 0.2
   Substeps: 1
   useRealFixedTimestep: 0
 --- !u!4 &1775859295

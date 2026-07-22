@@ -7,7 +7,7 @@ namespace GNB.Demo
         public Gun Gun = null;
         public Transform Dummy = null;
 
-        [Min(0.01f)] public float TimeStep = .1f;
+        [Min(0.01f)] public float Timestep = .2f;
         [Min(1)] public int Substeps = 1;
 
         [Tooltip("Using the actual fixed timestep will result in the most accurate prediction, but can be prohibitively expensive.")]
@@ -16,7 +16,7 @@ namespace GNB.Demo
         private void Update()
         {
             var (hitSomething, hitInfo) = Gun.GetPredictedImpactPoint(
-                useRealFixedTimestep ? Time.fixedDeltaTime : TimeStep,
+                useRealFixedTimestep ? Time.fixedDeltaTime : Timestep,
                 Substeps);
             if (hitSomething)
             {
