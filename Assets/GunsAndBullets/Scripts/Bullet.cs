@@ -350,9 +350,9 @@ namespace GNB
             bool isHitAllowed = true;
 
             var hitRigidbody = hit.rigidbody;
-            if (hitRigidbody && ignoredRigidbodies.Contains(hitRigidbody))
+            if (hitRigidbody && ignoredRigidbodies.Count > 0 && ignoredRigidbodies.Contains(hitRigidbody))
                 isHitAllowed = false;
-            else if (ignoredColliders.Contains(hit.collider))
+            else if (ignoredColliders.Count > 0 && ignoredColliders.Contains(hit.collider))
                 isHitAllowed = false;
 
             return isHitAllowed;
