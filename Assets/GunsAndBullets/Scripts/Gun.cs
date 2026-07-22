@@ -1,5 +1,6 @@
 ﻿using UnityEngine;
 using System.Collections.Generic;
+using UnityEngine.Assertions;
 
 namespace GNB
 {
@@ -8,13 +9,15 @@ namespace GNB
         public float RecoilLength = 0.3f;
         public float RecoverSpeed = 1f;
 
-        private Transform barrel = null;
-        private Vector3 startLocalPosition = Vector3.zero;
+        private readonly Transform barrel = null;
+        private readonly Vector3 startLocalPosition = Vector3.zero;
+        private readonly Vector3 recoilAxis = Vector3.back;
         private float recoil = 0f;
 
-        public GunBarrel(Transform barrel, float recoilLength, float recoverSpeed)
+        public GunBarrel(Transform barrel, Vector3 recoilAxis, float recoilLength, float recoverSpeed)
         {
             this.barrel = barrel;
+            this.recoilAxis = recoilAxis;
             RecoilLength = recoilLength;
             RecoverSpeed = recoverSpeed;
             startLocalPosition = this.barrel.localPosition;
@@ -33,7 +36,7 @@ namespace GNB
             // back at where it started, but this distance should be small enough
             // that hopefully it won't be noticeable.
             if (recoil > 0f)
-                barrel.transform.localPosition = startLocalPosition + (Vector3.back * recoil);
+                barrel.transform.localPosition = startLocalPosition + (recoilAxis * recoil);
         }
     }
 
@@ -42,13 +45,13 @@ namespace GNB
         [Header("Ballistics")]
 
         [Tooltip("Time (s) between each shot.")]
-        public float FireDelay = .2f;
+        [Min(0)] public float FireDelay = .2f;
 
         [Tooltip("Speed (m/s) that the bullet is fired from the barrel.")]
         public float MuzzleVelocity = 200f;
 
         [Tooltip("Amount of spread the gun has. Higher values result in more spread.")]
-        public float Deviation = .1f;
+        [Min(0)] public float Deviation = .1f;
 
         [Tooltip("Automatically inherit the velocity of a parent Rigidbody when firing bullets.")]
         public bool AutoInheritVelocity = true;
@@ -84,8 +87,15 @@ namespace GNB
         [Tooltip("How quickly (m/s) the barrel moves back towards its resting position.")]
         public float RecoilRecoverSpeed = 1f;
 
+        [Tooltip("Unity by default uses -Z in order to denote \"back\", so that is the convention followed here. If you would like to override this behavior, e.g. if the barrel model has an unusual axis orientation, the direction that barrels recoil can be set here.")]
+        public Vector3 BarrelRecoilAxis = new Vector3(0, 0, -1);
+
         [Tooltip("The list of the barrels used for visually recoiling barrels. This list of barrels should map 1:1 with fire points.")]
         [SerializeField] private List<Transform> RecoilingBarrels = new List<Transform>();
+
+        [Header("Sound Effects")]
+        [Tooltip("Plays this audio source when the gun fires.")]
+        [SerializeField] private AudioSource FireSound = null;
 
         [Header("Firing")]
 
@@ -151,6 +161,8 @@ namespace GNB
                 foreach (var barrel in RecoilingBarrels)
                     RegisterRecoilingBarrel(barrel);
             }
+
+            ReloadAmmo();
         }
 
         private void RegisterFirePoint(Transform firePoint)
@@ -158,7 +170,7 @@ namespace GNB
             if (firePoint == null)
                 return;
 
-            if (MuzzleFlashPrefab != null)
+            if (MuzzleFlashPrefab)
             {
                 var muzzleFlash = Instantiate(MuzzleFlashPrefab, firePoint, false);
                 firePointToMuzzleFlash.Add(firePoint, muzzleFlash);
@@ -170,7 +182,7 @@ namespace GNB
             if (barrel == null)
                 return;
 
-            var recoilingBarrel = new GunBarrel(barrel, RecoilLength, RecoilRecoverSpeed);
+            var recoilingBarrel = new GunBarrel(barrel, BarrelRecoilAxis, RecoilLength, RecoilRecoverSpeed);
             barrelVisuals.Add(recoilingBarrel);
         }
 
@@ -189,7 +201,7 @@ namespace GNB
         private void FixedUpdate()
         {
             if (HasRigidbody && AutoInheritVelocity)
-                InheritedVelocity = Rigidbody.velocity;
+                InheritedVelocity = Rigidbody.linearVelocity;
 
             if (FireInFixed)
             {
@@ -222,11 +234,16 @@ namespace GNB
         /// <summary>
         /// Fire a simulated bullet from the gun's current location to see where it lands.
         /// </summary>
-        /// <param name="timeStep">Time between each simulation step. The lower the value, the
-        /// more precision.</param>
+        /// <param name="timestep">Time between each simulation and collision sweep step. The lower
+        /// the value, the more precision. If your bullets move in FixedUpdate, matching this value
+        /// with <see cref="Time.fixedDeltaTime"/> will give the most accurate results.</param>
+        /// <param name="substeps">How many times the bullet moves each step. Higher numbers make
+        /// for more accurate and predictable bullet motion. Collision sweep tests are not done
+        /// between these substeps. Typically should be left at 1. Only used when bullets have drag.
+        /// </param>
         /// <returns>Tuple where if the first value (hitSomething) is <see langword="true"/>, then
         /// the second value (hitInfo) will be filled out with information on what was hit.</returns>
-        public (bool hitSomething, RaycastHit hitInfo) GetPredictedImpactPoint(float timeStep)
+        public (bool hitSomething, RaycastHit hitInfo) GetPredictedImpactPoint(float timestep, int substeps = 1)
         {
             var willHitSomething = false;
             var firePoint = FirePoints[firePointIndex % FirePoints.Count];
@@ -235,18 +252,24 @@ namespace GNB
 
             var simPosition = firePoint.position;
             var simVelocity = firePoint.forward * MuzzleVelocity + InheritedVelocity;
+            var simAcceleration = BulletPrefab.CalculateAcceleration(simVelocity);
 
             var simTime = 0f;
             var maxSimTime = BulletPrefab.TimeToLive;
             while (simTime < maxSimTime && !willHitSomething)
             {
-                (simPosition, simVelocity) = BulletPrefab.CalculateBulletMotion(simPosition, simVelocity, timeStep);
-                (willHitSomething, hitInfo) = BulletPrefab.RunHitDetection(simPosition, simVelocity, timeStep);
+                (simPosition, simVelocity, simAcceleration) = BulletPrefab.CalculateBulletMotion(
+                    simPosition, simVelocity, simAcceleration,
+                    timestep, substeps);
+
+                (willHitSomething, hitInfo) = BulletPrefab.RunHitDetection(
+                    simPosition, simVelocity,
+                    timestep);
 
                 if (willHitSomething)
                     willHitSomething = true;
 
-                simTime += timeStep;
+                simTime += timestep;
             }
 
             return (willHitSomething, hitInfo);
@@ -295,6 +318,9 @@ namespace GNB
             if (!ReadyToFire)
                 return false;
 
+            Assert.IsTrue(FirePoints.Count > 0, $"Gun {name} has no firepoints to fire from!");
+            Assert.IsNotNull(BulletPrefab, $"Gun {name} has no bullet prefab to fire!");
+
             if (IsSequentialFiring)
             {
                 // Cycle between all the fire points.
@@ -315,6 +341,9 @@ namespace GNB
                     AmmoCount -= 1;
                 }
             }
+
+            if (FireSound)
+                FireSound.Play();
 
             lastShotTime = Time.time;
             return true;

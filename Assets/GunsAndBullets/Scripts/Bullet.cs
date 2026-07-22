@@ -1,5 +1,9 @@
-﻿using UnityEngine;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
+using UnityEngine;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace GNB
 {
@@ -18,15 +22,19 @@ namespace GNB
         [Tooltip("Layers the bullet will normally hit")]
         public LayerMask RayHitLayers = -1;
         [Tooltip("How long (seconds) the bullet lasts")]
-        public float TimeToLive = 5f;
+        [Min(0)] public float TimeToLive = 5f;
+        [Tooltip("The faster the bullet goes, the harder drag pushes to slow it down. Higher values make for a bullet that slows down faster.")]
+        [Min(0)] public float Drag = 0;
         [Tooltip("Gravity applied to the bullet where 1 is normal gravity.")]
         public float GravityModifier = 0f;
         [Tooltip("When true, the bullet automatically aligns itself to its velocity. Useful in arcing motions.")]
         public bool AlignToVelocity = false;
         [Tooltip("Length of bullet assuming the origin is the \"tail\" and a BulletLength's distance forwards is the \"head\".")]
-        public float BulletLength = 1f;
+        [Min(0)] public float BulletLength = 1f;
         [Tooltip("This should be set to true when using physics based projects.")]
         [SerializeField] private bool MoveInFixedUpdate = true;
+        [Tooltip("Moves the bullet using a Rigidbody instead of the transform. This is useful if you want to move the bullet in fixed, but use Rigidbody interpolation in order to keep the visuals smooth. The Rigidbody will be forced to kinematic.")]
+        [SerializeField] private Rigidbody Rigidbody = null;
 
         [Header("Thick Bullets")]
         [Tooltip("Use thick hit detection for the bullet. This is run in addition to normal hit detection.")]
@@ -34,7 +42,7 @@ namespace GNB
         [Tooltip("The layers the bullet will hit using thick hit detection.")]
         public LayerMask ThickHitLayers = 0;
         [Tooltip("Used only when thick hit detection is enabled.")]
-        public float BulletDiameter = 1f;
+        [Min(0)] public float BulletDiameter = 1f;
 
         [Header("Explosions")]
         public bool ExplodeOnImpact = false;
@@ -50,9 +58,22 @@ namespace GNB
 
         private static RaycastHit[] raycastHits = new RaycastHit[32];
 
+        private bool hasRigidbody = false;
+
+        public Vector3 Acceleration { get; private set; } = Vector3.zero;
         public Vector3 Velocity { get; private set; } = Vector3.zero;
         public float SecondsSinceFired { get; private set; } = 0f;
         public bool IsFired { get; private set; } = false;
+
+        private void Awake()
+        {
+            hasRigidbody = Rigidbody != null;
+            if (hasRigidbody)
+                Rigidbody.isKinematic = true;
+
+            if (hasRigidbody && !MoveInFixedUpdate)
+                Debug.LogWarning($"Bullet {name} has a Rigidbody, but the bullet is not set to move in FixedUpdate! This can cause unusual behavior and stuttering movement.)", this);
+        }
 
         private void Update()
         {
@@ -76,6 +97,8 @@ namespace GNB
         {
             // Start position.
             transform.position = position;
+            if (hasRigidbody)
+                Rigidbody.position = position;
 
             // Calculate a random deviation.
             Vector3 deviationAngle = Vector3.zero;
@@ -84,24 +107,83 @@ namespace GNB
             Quaternion deviationRotation = Quaternion.Euler(deviationAngle);
 
             // Rotate the bullet to the direction requested, plus some random deviation.
-            transform.rotation = rotation * deviationRotation;
+            var finalRotation = rotation * deviationRotation;
+            transform.rotation = finalRotation;
+            if (hasRigidbody)
+                Rigidbody.rotation = finalRotation;
 
             Velocity = (transform.forward * muzzleVelocity) + inheritedVelocity;
+            Acceleration = CalculateAcceleration(Velocity);
             IsFired = true;
+        }
+
+        public Vector3 CalculateAcceleration(Vector3 velocity)
+        {
+            // The drag used here is very basic and not really realistic linear drag, but if you
+            // prefer to change the drag model, this is the place to do it.
+            var gravity = Physics.gravity * GravityModifier;
+            var drag = -velocity * Drag;
+            return gravity + drag;
         }
 
         /// <summary>
         /// Calculates the motion of the bullet given the starting position and velocity.
         /// Returns a tuple of the resulting position and velocity.
         /// </summary>
+        /// <param name="substep">Typically should be left at a value of 1. Used only if <see cref="Drag"/>
+        /// is >0. When doing prediction, it can be helpful to raise the substeps if the given
+        /// deltaTime does not match the bullets usual timesteps.</param>
         /// <param name="deltaTime">The time to simulate forwards. The smaller this value, the more
         /// accurate the result.</param>
-        public (Vector3 position, Vector3 velocity) CalculateBulletMotion(Vector3 position, Vector3 velocity, float deltaTime)
+        public (Vector3 position, Vector3 velocity, Vector3 acceleration) CalculateBulletMotion(Vector3 position, Vector3 velocity, Vector3 acceleration, float deltaTime, int substep = 1)
         {
-            velocity += Physics.gravity * GravityModifier * deltaTime;
-            position += velocity * deltaTime;
+            if (GravityModifier > 0 || Drag > 0)
+            {
+                // Bullets with gravity or drag can be done much more accurately, with much larger
+                // timesteps, using Velocity Verlet.
+                // https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation
 
-            return (position, velocity);
+                if (Drag > 0)
+                {
+                    // Drag is much less robust against lower timesteps for prediction, so there's
+                    // some additional math to be done, and optional substepping
+                    var substepsToUse = Mathf.Max(1, substep);
+                    float substepDeltaTime = deltaTime / substepsToUse;
+                    for (int i = 0; i < substepsToUse; i++)
+                    {
+                        var newPosition = position + velocity * substepDeltaTime + acceleration * (substepDeltaTime * substepDeltaTime * 0.5f);
+                        position = newPosition;
+                        // Velocity verlet only works correctly when acceleration isn't dependent on
+                        // velocity. To approximate a changing acceleration (i.e. due to drag), the
+                        // acceleration must be predicted next frame which requires a guess of what the
+                        // velocity next frame is going to be as well.
+                        var futureAcceleration = CalculateAcceleration(velocity);
+                        var newAcceleration = CalculateAcceleration(velocity + futureAcceleration * substepDeltaTime);
+                        var newVelocity = velocity + (acceleration + newAcceleration) * (substepDeltaTime * 0.5f);
+                        velocity = newVelocity;
+                        acceleration = newAcceleration;
+                    }
+                }
+                else
+                {
+                    // When a bullet has only gravity, traditional Velocity Verlet is good enough.
+                    var newPosition = position + velocity * deltaTime + acceleration * (deltaTime * deltaTime * 0.5f);
+                    var newAcceleration = CalculateAcceleration(velocity);
+                    var newVelocity = velocity + (acceleration + newAcceleration) * (deltaTime * 0.5f);
+                    position = newPosition;
+                    velocity = newVelocity;
+                    acceleration = newAcceleration;
+                }
+            }
+            else
+            {
+                // For bullets with no gravity or drag,
+                acceleration = CalculateAcceleration(velocity);
+                velocity += acceleration * deltaTime;
+                position += velocity * deltaTime;
+            }
+
+            return (position, velocity, acceleration);
         }
 
         /// <summary>
@@ -123,7 +205,7 @@ namespace GNB
         /// </summary>
         public void AddIgnoredRigidbody(Rigidbody rigidbody)
         {
-            if (rigidbody != null)
+            if (rigidbody)
                 ignoredRigidbodies.Add(rigidbody);
         }
 
@@ -136,7 +218,10 @@ namespace GNB
         public void AddIgnoredRigidbodies(IEnumerable<Rigidbody> rigidbodies)
         {
             foreach (var rigidbody in rigidbodies)
-                ignoredRigidbodies.Add(rigidbody);
+            {
+                if (rigidbody)
+                    ignoredRigidbodies.Add(rigidbody);
+            }
         }
 
         /// <summary>
@@ -146,7 +231,7 @@ namespace GNB
         /// </summary>
         public void AddIgnoredCollider(Collider collider)
         {
-            if (collider != null)
+            if (collider)
                 ignoredColliders.Add(collider);
         }
 
@@ -158,7 +243,10 @@ namespace GNB
         public void AddIgnoredColliders(IEnumerable<Collider> colliders)
         {
             foreach (var collider in colliders)
-                ignoredColliders.Add(collider);
+            {
+                if (collider)
+                    ignoredColliders.Add(collider);
+            }
         }
 
         /// <summary>
@@ -166,7 +254,7 @@ namespace GNB
         /// </summary>
         public void ExplodeBullet(Vector3 explodePosition, Quaternion explodeRotation)
         {
-            if (ExplodeFXPrefab != null)
+            if (ExplodeFXPrefab)
                 Instantiate(ExplodeFXPrefab, explodePosition, explodeRotation).Play();
 
             HandleExplosionDamage(explodePosition);
@@ -180,7 +268,7 @@ namespace GNB
         /// </summary>
         public void DestroyBulletFromImpact(Vector3 impactedPoint, Quaternion impactRotation)
         {
-            if (ImpactFXPrefab != null)
+            if (ImpactFXPrefab)
                 Instantiate(ImpactFXPrefab, impactedPoint, impactRotation).Play();
 
             CleanUpTrails();
@@ -222,9 +310,17 @@ namespace GNB
                 else
                 {
                     // Bullet continues motion.
-                    var (position, velocity) = CalculateBulletMotion(transform.position, Velocity, deltaTime);
-                    transform.position = position;
+                    var (position, velocity, acceleration) = CalculateBulletMotion(
+                        transform.position,
+                        Velocity, Acceleration,
+                        deltaTime);
+
+                    if (hasRigidbody)
+                        Rigidbody.MovePosition(position);
+                    else
+                        transform.position = position;
                     Velocity = velocity;
+                    Acceleration = acceleration;
 
                     if (AlignToVelocity && velocity.sqrMagnitude > .01f)
                         transform.rotation = Quaternion.LookRotation(velocity, transform.up);
@@ -254,7 +350,7 @@ namespace GNB
             bool isHitAllowed = true;
 
             var hitRigidbody = hit.rigidbody;
-            if (hitRigidbody != null && ignoredRigidbodies.Contains(hitRigidbody))
+            if (hitRigidbody && ignoredRigidbodies.Contains(hitRigidbody))
                 isHitAllowed = false;
             else if (ignoredColliders.Contains(hit.collider))
                 isHitAllowed = false;
@@ -308,9 +404,9 @@ namespace GNB
         private (bool hitSomething, RaycastHit closestHit) GetClosestValidHit(RaycastHit[] listOfHits, int hitCount)
         {
             if (hitCount == 0)
-                return (false, new RaycastHit());
+                return (false, listOfHits[0]);
 
-            RaycastHit closestHit = new RaycastHit();
+            RaycastHit closestHit = listOfHits[0];
             float closestDistance = float.MaxValue;
             bool hitSomething = false;
 
@@ -357,36 +453,53 @@ namespace GNB
 
             Gizmos.DrawLine(Vector3.right, Vector3.left);
             Gizmos.DrawLine(Vector3.up, Vector3.down);
-            Gizmos.DrawLine(Vector3.zero, transform.forward * BulletLength);
+            Gizmos.DrawLine(Vector3.zero, Vector3.forward * BulletLength);
 
             var bulletHead = new Vector3(0f, 0f, BulletLength);
-            Gizmos.DrawLine(bulletHead + Vector3.right, bulletHead + Vector3.right);
+            Gizmos.DrawLine(bulletHead - Vector3.right, bulletHead + Vector3.right);
             Gizmos.DrawLine(bulletHead + Vector3.up, bulletHead + Vector3.down);
+
+            // Draw a representative capsule for thick bullets in local space.
+            if (IsThick)
+            {
+                var radius = BulletDiameter / 2;
+
+                var oldHandleMatrix = Handles.matrix;
+                var oldHandleColor = Handles.color;
+
+                Handles.matrix = Gizmos.matrix;
+                Handles.color = Gizmos.color;
+
+                Handles.DrawWireArc(Vector3.zero, Vector3.up, Vector3.right, 180, radius);
+                Handles.DrawWireArc(Vector3.zero, Vector3.right, Vector3.up, -180, radius);
+
+                Handles.DrawWireDisc(Vector3.zero, Vector3.forward, radius);
+                Handles.DrawWireDisc(bulletHead, Vector3.forward, radius);
+
+                Handles.DrawWireArc(bulletHead, Vector3.up, Vector3.right, -180, radius);
+                Handles.DrawWireArc(bulletHead, Vector3.right, Vector3.up, 180, radius);
+
+                Handles.DrawLine(new Vector3(radius, 0, 0), new Vector3(radius, 0, BulletLength));
+                Handles.DrawLine(new Vector3(0, radius, 0), new Vector3(0, radius, BulletLength));
+                Handles.DrawLine(new Vector3(-radius, 0, 0), new Vector3(-radius, 0, BulletLength));
+                Handles.DrawLine(new Vector3(0, -radius, 0), new Vector3(0, -radius, BulletLength));
+
+                Handles.matrix = oldHandleMatrix;
+                Handles.color = oldHandleColor;
+            }
 
             Gizmos.matrix = Matrix4x4.identity;
 
-            if (IsThick)
-            {
-                var velocity = MoveInFixedUpdate ? Velocity * Time.fixedDeltaTime : Velocity * Time.deltaTime;
+            // Lines to represent the bullet in motion.
+            var velocity = MoveInFixedUpdate ? Velocity * Time.fixedDeltaTime : Velocity * Time.deltaTime;
 
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(transform.position - velocity, transform.position);
-                Gizmos.DrawWireSphere(transform.position, BulletDiameter * .5f);
+            // Red lines show the distance covered by the bullet last frame.
+            Gizmos.color = Color.red;
+            Gizmos.DrawLine(transform.position - velocity, transform.position);
 
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawLine(transform.position + velocity, transform.position);
-                Gizmos.DrawWireSphere(transform.position + velocity, BulletDiameter * .5f);
-            }
-            else
-            {
-                var velocity = MoveInFixedUpdate ? Velocity * Time.fixedDeltaTime : Velocity * Time.deltaTime;
-
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(transform.position - velocity, transform.position);
-
-                Gizmos.color = Color.yellow;
-                Gizmos.DrawLine(transform.position + velocity, transform.position);
-            }
+            // Yellow lines show where the bullet will move on the next frame.
+            Gizmos.color = Color.yellow;
+            Gizmos.DrawLine(transform.position + velocity, transform.position);
         }
 #endif
     }

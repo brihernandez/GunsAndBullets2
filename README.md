@@ -20,7 +20,7 @@ The goal of this project was to create a sort of "canonical" version of bullet a
 
 ![Guns](Screenshots/gundemo.gif)
 
-This project was built in **Unity 2018.4.30f1**.
+This project was built in **Unity 6000.0.70f1**.
 
 ## Download
 You can either clone the repository or [download the asset package](./GunsAndBullets2.unitypackage) located in the root.
@@ -78,7 +78,12 @@ The most important functions describing how the bullets work are these three:
 These three functions get used in the `UpdateBullet` function to both move it and detect if the bullet has hit an object. Since these functions **do not** rely on any state information held in the bullet itself, they can be called with any arbitrary starting positions to run the bullet for **one frame**. In normal use, this just means it gets called in the `FixedUpdate` loop, but they can also be used to simulate a hypothetical bullet, its flight path, and a target it may hit.
 
 ### CalculateBulletMotion
-Straightforward function for linear bullets with optional gravity modifier to take gravity into account. There is no calculation for drag or anything more complex than that. Anything more is too project-specific, so it's up to you to specify if need be. I find that this type of motion is good enough for the vast majority of cases.
+Straightforward function for linear bullets with optional gravity and drag modifiers. Anything more is too project-specific, so it's up to you to specify if need be. I find that this type of motion is good enough for the vast majority of cases.
+
+For bullets with no gravity, the simple Euler Method (i.e. `position + velocity * deltaTime`) is applied for bullets, for the fastest calculations possible. For bullets with gravity, [Velocity Verlet](https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation) is used due to it being significantly more accurate than Euler Method, especially with longer steps between each update. In my testing, Velocity Verlet is able to perfectly predict bullets with a 0.1 timestep that the Euler Method would requires a 0.02 timestep to achieve. When drag is added to bullets however, substepping is required. See the [Draggy Bullets](#draggy-bullets) subsection for more information.
+
+These optimizations are maybe unncessary given that the [ignoredRigidbodies/ignoredColliders](#ignoring-collisions) is the real bottleneck of these functions, but substepping can sometimes shift the balance depending on how extreme it is.
+
 
 ### CalculateRayHitDetection
 One of the hit detection methods. This uses a very simple [Raycast](https://docs.unity3d.com/ScriptReference/Physics.Raycast.html) forwards one frame to see if the bullet will hit something. The raycasting allows for bullets to never tunnel through an object due to high speeds.
@@ -97,9 +102,14 @@ Using the `ExplodeOnImpact` and `ExplodeOnTimeout` properties, bullets can be se
 Explosions and impacts are configured to use different effects, which can be specified using the `ExplodeFXPrefab` and `ImpactFXPrefab` properties.
 
 ## Moving in FixedUpdate vs. Update
-The rule of thumb for this is: if you are using a physics based project, you will need to set `MoveInFixed` to `true`. If the bullets are updating in a different update loop from the rest of the game, they will move in a very stuttery fashion.
+The rule of thumb for this is: if you are using a physics based project, you will need to set `MoveInFixed` to `true`. If the bullets are updating in a different update loop from the rest of the game, they will move in a very stuttery fashion. This is a very deep topic with a lot of nuance which will depend on your game, so experiment with what works best for you.
 
-Nearly all my projects are physics-based, so this defaults to true.
+As nearly all my projects are physics-based and sensitive to high speeds and timing, this defaults to true.
+
+If you are using Rigidbody interpolation for your player GameObjects, or need to see bullets move in the Update loop, but still *physically* move in the FixedUpdate loop for maximum stability, [Rigidbody Interpolation](#rigidbody-interpolation) has been added in 1.4.
+
+## Rigidbody Bullets
+If a Rigidbody is added to the bullet, then movement of the bullet will be done through [Rigidbody.MovePosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.MovePosition.html) rather than by directly moving their transforms. This allows you to take advantage of Rigidbody non-movement related features such as collision detection events or [interpolation](#rigidbody-interpolation).
 
 ## Limitations
 The code in this project is very simple. While it is generic enough to cover what I feel is 90% of use cases involving fast bullets, there are some limitations to keep in mind.
@@ -186,7 +196,7 @@ If you have a specific value you'd like to use for inherited velocity, or you ar
 
 It's often that you will want a projectile to not collider with the object that fired it. Before a `Bullet` is fired, the functions `AddIgnoredRigidbody` and `AddIgnoredCollider` can be used to set exceptions for the bullet's hit detection. When possible, prefer ignoring a `Rigidbody` since it's more robust and slightly more performant than ignoring specific `Collider`s.
 
-See [Ignoring Collisions](#Ignoring-Collisions) for more details on usage.
+See [Ignoring Collisions](#ignoring-collisions) for more details on usage.
 
 ##### `IgnoreOwnRigidbody`
 The `Gun` class contains convenience functions to automatically ignore its own `Rigidbody` when firing bullets. If you'd like to shoot yourself, set this property to `false`.
@@ -206,6 +216,21 @@ To use this correctly:
 3. Adjust the `BulletLength` property so that the front cross aligns with the front tip of your bullet.
 
 ![LengthExample](Screenshots/lengthexample.gif)
+
+## Rigidbody Interpolation
+
+![RigidbodyInterpolation](Screenshots/rigidbodyinterpolation.gif)
+
+New in 1.4, bullets now support moving with kinematic Rigidbody components attached. The main purpose for this is to allow for [Rigidbody Interpolation](https://docs.unity3d.com/6000.0/Documentation/Manual/rigidbody-interpolation.html).
+
+To use interpolation, the bullet must be a [Rigidbody based bullet](#rigidbody-bullets) and have `Interpolate` set to either `Interpolate` or `Extrapolate`.
+
+## Draggy Bullets
+
+![DraggyBullets](Screenshots/draggybullets.gif)
+
+New in 1.4, bullets can have drag assigned to them.
+
 
 # Changelog
 

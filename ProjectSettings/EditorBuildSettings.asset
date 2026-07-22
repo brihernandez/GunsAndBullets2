@@ -4,5 +4,39 @@
 EditorBuildSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 2
-  m_Scenes: []
+  m_Scenes:
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/0_Bootstrapper.unity
+    guid: 6033664a38961c04cab1bfcb10cb732a
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/1_GunExamples.unity
+    guid: cad7d6a8811e3544fbec9b0de69d13e5
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/2_Gimballing.unity
+    guid: 34e27dff339fab54e87a912b205c0c7c
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/3_ThickBullets.unity
+    guid: 565bf4c8022022141b357e04b19f0060
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/4_Prediction.unity
+    guid: 0cc58fde31159a846b489610f9cd454b
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/5_InheritedMotion.unity
+    guid: a5d4a86698705ac4393d889379780a3d
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/6_IgnoreHits.unity
+    guid: 6a163c4242aae1b4f9ab0dbfe9406166
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/7_RecoilingBarrels.unity
+    guid: 70d8e40b425a983468cda824f38d3666
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/8_LongBullet.unity
+    guid: 5e69379a8dad99b47a32013778070c8a
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/9_RigidboyInterpolation.unity
+    guid: 5242779ab24b6d246bd1961f57a787d1
+  - enabled: 1
+    path: Assets/GunsAndBullets/Demo/10_DraggyBullets.unity
+    guid: 661d7f8934c51c44a9cea71c92b51814
   m_configObjects: {}
+  m_UseUCBPForAssetBundles: 0

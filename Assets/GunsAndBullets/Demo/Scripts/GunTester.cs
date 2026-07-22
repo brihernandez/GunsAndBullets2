@@ -6,10 +6,11 @@ namespace GNB.Demo
     {
         public Gun[] guns;
         public Transform GimbalTarget = null;
+        public bool autoFire = false;
 
         private void Update()
         {
-            if (Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space))
+            if (autoFire || Input.GetMouseButton(0) || Input.GetKey(KeyCode.Space))
             {
                 foreach (var gun in guns)
                 {
