@@ -291,7 +291,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: 'Use the number keys 1-9 to
+  m_Text: 'Use the number keys 1-0 to
 
     switch between different demos.'
 --- !u!222 &406427234
