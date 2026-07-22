@@ -785,9 +785,10 @@ MonoBehaviour:
   - {fileID: 1521772039}
   RecoilLength: 0.3
   RecoilRecoverSpeed: 1
+  BarrelRecoilAxis: {x: 0, y: 0, z: -1}
   RecoilingBarrels: []
   FireSound: {fileID: 0}
-  BulletPrefab: {fileID: 114839090480401972, guid: 9b7940559b6fbdf449825d1ebc18ac87,
+  BulletPrefab: {fileID: 114839090480401972, guid: 6ffbda2b41a946f498c2865f2bfd7506,
     type: 3}
   MuzzleFlashPrefab: {fileID: 0}
   FireInFixed: 1
@@ -1281,7 +1282,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   Gun: {fileID: 947187199}
   Dummy: {fileID: 54538703}
-  TimeStep: 0.01
+  TimeStep: 0.2
+  Substeps: 1
+  useRealFixedTimestep: 0
 --- !u!4 &1680813188
 Transform:
   m_ObjectHideFlags: 0
