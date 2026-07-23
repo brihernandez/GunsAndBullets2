@@ -400,7 +400,7 @@ namespace GNB
                 origin: position,
                 direction: velocity,
                 maxDistance: BulletLength + velocity.magnitude * deltaTime,
-                layerMask: ThickHitLayers | RayHitLayers,
+                layerMask: RayHitLayers,
                 results: raycastHits);
 
             var (hitSomething, closestHitIndex) = GetClosestValidHit(raycastHits, hitCount);
