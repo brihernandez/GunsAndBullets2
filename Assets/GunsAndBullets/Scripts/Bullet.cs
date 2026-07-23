@@ -365,6 +365,9 @@ namespace GNB
 
         private (bool hitSomething, RaycastHit hitInfo) RunThickHitDetection(Vector3 position, Vector3 velocity, float deltaTime)
         {
+            if (ThickHitLayers == 0)
+                return RunRayHitDetection(position, velocity, deltaTime);
+
             // For thick bullets, first do collision detection only on things considered targets.
             int hitCount = Physics.SphereCastNonAlloc(
                 origin: position,
@@ -375,7 +378,7 @@ namespace GNB
                 layerMask: ThickHitLayers);
 
             var (bulletHitSomething, closestHitIndex) = GetClosestValidHit(raycastHits, hitCount);
-            if (!bulletHitSomething)
+            if (!bulletHitSomething && RayHitLayers != 0)
             {
                 // If the bullet didn't hit anything, then do normal raycast style hit detection
                 // against other objects that we don't care about having generous hit detection.
@@ -396,6 +399,9 @@ namespace GNB
 
         private (bool hitSomething, RaycastHit hitInfo) RunRayHitDetection(Vector3 position, Vector3 velocity, float deltaTime)
         {
+            if (RayHitLayers == 0)
+                return (false, raycastHits[0]);
+
             int hitCount = Physics.RaycastNonAlloc(
                 origin: position,
                 direction: velocity,
