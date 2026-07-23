@@ -3,8 +3,14 @@ This project is a set of generic gun and bullet components to be futher expanded
 
 The goal of this project was to create a sort of "canonical" version of bullet and gun code that I so frequently write and rewrite. Rather than constantly pulling and gutting code from old projects, it'd be nice to have a single package that I can just import.
 
-## Features:
+There are two ways I usually use this repository:
 
+1. I am making a very quick prototype and I don't care that much about how the guns or bullets work. In that case, I just drop the whole package directly into the project and use the guns/bullets directly.
+2. The project I'm working on requires bespoke bullets, but I will often reference the code from this repository and just copy/paste snippets as needed. For me, that's usually the hit detection, and prediction architecture, because I think that's very solid stuff.
+
+The code here isn't super-optimized, because the most optimized solution will always be something tailor made for your project and your requirements. However, I did spend some time making sure what's here is reasonably optimized for how flexible they are designed to be. Honestly, as long as you aren't doing something crazy with thousands of bullets flying through the air at once, I am confident in saying that I think this is practically shippable code. Throw some kind of pooling on the bullets, and I would say this *is* shippable.
+
+## Features:
 * Guns with optionally **limited ammo**
 * Bullets can be fired with **random deviation**
 * Simple handling for effects such as **muzzle flashes and impacts**
@@ -17,38 +23,39 @@ The goal of this project was to create a sort of "canonical" version of bullet a
 * Optional ability for bullets to **ignore specific objects** to prevent shooting yourself
 * Optional ability to **self destruct** on timeout
 * Bullets have **length** to them, for more visually accurate hit detection
+* Optional **gravity and drag** for bullets, that also work with prediction
+* Support for **Rigidbody interpolation and movement**
+* Barrels can be given procedural **recoil** for cooler visuals
 
 ![Guns](Screenshots/gundemo.gif)
 
 This project was built in **Unity 6000.0.70f1**.
 
 ## Download
-You can either clone the repository or [download the asset package](./GunsAndBullets2.unitypackage) located in the root.
+You can either clone the repository or [download the asset package](./GunsAndBullets2.unitypackage?raw=true) located in the root.
 
 # Guns
-
 ![](Screenshots/gunproperties.png)
 
-The guns themselves are pretty straightforward. They fire automatically at a set rate of fire as long as `IsFiring` is set to true. If only a single shot is desired, the `FireSingleShot` function can be used.
+The guns themselves are pretty straightforward. They fire automatically at a set rate of fire as long as `IsFiring` is set to true. If only a single shot is desired, the `FireSingleShot()` function can be used.
 
-Using `GetPredictedImpactPoint`, the exact path of a bullet can be predicted. See [Prediction](#Prediction) for more information.
+Using `GetPredictedImpactPoint()`, the exact path of a bullet can be predicted. See [Prediction](#Prediction) for more information.
 
 The gun uses a **Fire Point** system to determine where bullets and muzzle flashes are to be placed. This allows for weapons with multiple fire points. If no fire points are assigned (`FirePoints` array is left empty), then the gun will fire bullets from whatever `Transform` the `Gun` script is attached to. Fire points can be fired simultaneously, or sequentially.
 
 Ammo can optionally be used to limit the number of shots the gun can fire. To reload a gun to its maximum ammo count, call `ReloadAmmo`.
 
 ## Ignoring Collisions
-
 Bullets have several options for blacklisting Rigidbodies and Colliders from their own hit detection. The most common use for this, is to prevent a bullet from shooting the thing it fired it. This information cannot be filled out automatically, so the `Gun` will pass that information to the `Bullet` when it is fired.
 
 By default, a gun will try to get a reference to a parent `Rigidbody`. If the firing object has a Rigidbody, this is enough, and the **preferred** method. If any additional rigid bodies need to be ignored, the `AddIgnoredRigidbody` function can be used.
 
 If the firing object **does not** have a `Rigidbody`, then the `AddIgnoredCollider` function can be used to add a list of colliders for the bullet to ignore. This must be called manually, typically by whatever object is firing the gun. The list is persistent, so it only needs to be set once.
 
-## Limitations
+## Gun Limitations
 As with the bullets, I feel this component is generic enough to cover 90% of the use cases I'm interested in with little to no modification. However, there is one caveat to keep in mind:
 
-1. Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple fire points at the same time.
+Fire rate is handled by checking time since the last shot, once every frame. This means that a gun **cannot fire faster than its update loop**. When firing from FixedUpdate, this translates to whatever your `Fixed Timestep` is set to in project properties. By default, this is `0.02`. For extremely fast firing guns, the code must be extended, the rate of updates increased. The problem can also be somewhat worked around by firing from multiple fire points at the same time.
 
 If you start running into this limitation, you should also consider if you really *need* that many bullets flying in the air, as ultra-high rates of fire coming from enough guns can saturate a game with enough raycasts to slow it down.
 
@@ -80,10 +87,11 @@ These three functions get used in the `UpdateBullet` function to both move it an
 ### CalculateBulletMotion
 Straightforward function for linear bullets with optional gravity and drag modifiers. Anything more is too project-specific, so it's up to you to specify if need be. I find that this type of motion is good enough for the vast majority of cases.
 
-For bullets with no gravity, the simple Euler Method (i.e. `position + velocity * deltaTime`) is applied for bullets, for the fastest calculations possible. For bullets with gravity, [Velocity Verlet](https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation) is used due to it being significantly more accurate than Euler Method, especially with longer steps between each update. In my testing, Velocity Verlet is able to perfectly predict bullets with a 0.1 timestep that the Euler Method would requires a 0.02 timestep to achieve. When drag is added to bullets however, substepping is required. See the [Draggy Bullets](#draggy-bullets) subsection for more information.
+#### Gravity
+For bullets with no gravity, the simple Euler Method (i.e. `position + velocity * deltaTime`) is applied for bullets, for the fastest calculations possible. For bullets with gravity, [Velocity Verlet](https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation) is used due to it being significantly more accurate than Euler Method, especially with longer steps between each update. In my testing, Velocity Verlet is able to perfectly predict bullets with a 0.1 timestep that the Euler Method would requires a 0.02 timestep to achieve.
 
-These optimizations are maybe unncessary given that the [ignoredRigidbodies/ignoredColliders](#ignoring-collisions) is the real bottleneck of these functions, but substepping can sometimes shift the balance depending on how extreme it is.
-
+#### Drag
+Draggy bullets use a modified, and more expensive version of Velocity Verlet in order to keep them as consistent as possible. Sometimes though, substepping is required if you care about accurate prediction with larger timesteps. See the [Draggy Bullets](#draggy-bullets) subsection for more information.
 
 ### CalculateRayHitDetection
 One of the hit detection methods. This uses a very simple [Raycast](https://docs.unity3d.com/ScriptReference/Physics.Raycast.html) forwards one frame to see if the bullet will hit something. The raycasting allows for bullets to never tunnel through an object due to high speeds.
@@ -111,11 +119,12 @@ If you are using Rigidbody interpolation for your player GameObjects, or need to
 ## Rigidbody Bullets
 If a Rigidbody is added to the bullet, then movement of the bullet will be done through [Rigidbody.MovePosition](https://docs.unity3d.com/6000.0/Documentation/ScriptReference/Rigidbody.MovePosition.html) rather than by directly moving their transforms. This allows you to take advantage of Rigidbody non-movement related features such as collision detection events or [interpolation](#rigidbody-interpolation).
 
-## Limitations
+## Bullet Limitations
 The code in this project is very simple. While it is generic enough to cover what I feel is 90% of use cases involving fast bullets, there are some limitations to keep in mind.
 
 1. This solution is designed around bullets that will be traveling at fast speeds relative to their targets. If the targets travel at similar speeds, or faster, than the bullets, then it is possible for the hit detection to be unreliable, particularly when using the ray versions of hit detection.
-2. Neither the bullets, nor the impact effects, are pooled. Pooling is too project specific to include here, so keep in mind that you may want to write a pooling system for bullets, or rolling them into one you're already using, if bullet spawning/destruction becomes a bottleneck.
+2. Neither the bullets, nor the impact effects, are pooled. Pooling is too project specific and opinionated a solution for me to feel comfortable including one in here. If you commonly firing/destroying hundreds of bullets a second, you should consider writing a pooling system for the bullets. The `Bullet.Fire()` and `Bullet.DestroyBulletX()` functions are designed with this in mind, to make it easy to adapt to your project's pooling and reset a bullet's state.
+3. For an optimization reason, gravity is only considered in the Y direction. Any gravity in the X or Z components is ignored by bullets with gravity.
 
 # Special Bullet Features
 This project contains many special little features that I've come to find useful in the types of games I make.
@@ -163,22 +172,20 @@ Since the `GetPredictedImpactPoint` function is using exactly the same hit detec
 The smaller the timestep passed into the `GetPredictedImpactPoint` function, the more accurate the prediction. To get the most accurate prediction, use the same timestep as the [Physics timestep set in Project Settings](https://docs.unity3d.com/Manual/class-TimeManager.html). Be aware that this can become an expensive function, especially for long lasting bullets at low timesteps, since it is essentially running the entire bullet's lifetime in the course of one frame.
 
 ```csharp
-var simTime = 0f;
-var maxSimTime = BulletPrefab.TimeToLive;
 while (simTime < maxSimTime && !willHitSomething)
 {
-    (simPosition, simVelocity) = BulletPrefab.CalculateBulletMotion(
-        simPosition, simVelocity, timeStep);
+    (simPosition, simVelocity, simAcceleration) = BulletPrefab.CalculateBulletMotion(
+        simPosition, simVelocity, simAcceleration,
+        timestep, substeps);
+
     (willHitSomething, hitInfo) = BulletPrefab.RunHitDetection(
-        simPosition, simVelocity, timeStep);
+        simPosition, simVelocity,
+        timestep);
 
     if (willHitSomething)
-    {
         willHitSomething = true;
-        hitPosition = hitInfo.point;
-    }
 
-    simTime += timeStep;
+    simTime += timestep;
 }
 ```
 
@@ -221,18 +228,41 @@ To use this correctly:
 
 ![RigidbodyInterpolation](Screenshots/rigidbodyinterpolation.gif)
 
-New in 1.4, bullets now support moving with kinematic Rigidbody components attached. The main purpose for this is to allow for [Rigidbody Interpolation](https://docs.unity3d.com/6000.0/Documentation/Manual/rigidbody-interpolation.html).
-
-To use interpolation, the bullet must be a [Rigidbody based bullet](#rigidbody-bullets) and have `Interpolate` set to either `Interpolate` or `Extrapolate`.
+New in 1.4, bullets now support moving with kinematic Rigidbody components attached. The main purpose for this is to allow for [Rigidbody Interpolation](https://docs.unity3d.com/6000.0/Documentation/Manual/rigidbody-interpolation.html). To use interpolation, the bullet must be a [Rigidbody based bullet](#rigidbody-bullets) and have `Interpolate` set to either `Interpolate` or `Extrapolate`. Whether or not you *should* be using interpolation will heavily depend on your project, but this is a feature that I've found myself relying on more and more recently, so I wanted to make sure it was an option here to save myself the trouble of modifying the code all the time.
 
 ## Draggy Bullets
 
 ![DraggyBullets](Screenshots/draggybullets.gif)
 
-New in 1.4, bullets can have drag assigned to them.
+New in 1.4, bullets can have drag to slow them down. The drag is done through a simple linear drag because personally I find it more predictable and intuitive. The `CalculateAcceleration()` function can be modified to change the drag model.
 
+As drag depends on velocity, the [Velocity Verlet](https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation) approach doesn't quite work. When drag is enabled on a bullet, a modified version is used which estimates future velocities and accelerations. This is totally transparent if you aren't messing with the `CalculateBulletMotion()` function, but it's good to be aware of, because draggy bullets are the most expensive thing in this repository.
+
+If you need to predict impact points with draggy bullets, it might be necessary to use **substepping**. The `GunPrediction` component in this scene shows an example of how substeps can be used to increase the accuracy of predictions made with draggy bullets. For bullets with only light drag, the kind you'd see in a realistic environment, it's actually possible to get away with no substepping.
+
+It's also important to note that, for performance reasons, substepping is *only* on the bullet motion, **not** the hit detection. The `Gun.GetPredictedImpactPoint()` takes both a `timestep` and `substep` parameter. The `timestep` defines how long the bullet is simulated between hit detection sweeps. The `substep` defines how many `CalculateBulletMotion()`s run between those hit detection sweeps, providing for much more accurate motion, but without the full impact of also doing too much more hit detection checks. As with most things, experiment to see what values work best, but again, for most things with more realistic amounts of drag, you might be able to get away with no substepping at all.
+
+Generally, I don't really recommend you have bullets with drag on them because it can create a lot of headaches, especially if you have NPCs firing bullets with drag. That said, it can make for some interesting knobs to tweak for balance and design.
 
 # Changelog
+
+### 1.4 (July 23 2026)
+- Updated to Unity 6000.0.70f1
+- When built, demos can switched between with the number keys
+- Tweaked descriptions on all the demos
+- Added new demos for [rigidbody interpolation](#rigidbody-interpolation) and [drag](#draggy-bullets)
+- Added `[Min]` attribute guards for relevant properties
+- If a bullet is assigned a Rigidbody, it will use the Rigidbody to move instead of the Transform
+- Bullets with gravity will use Velocity Verlet instead of the Euler Method
+- Bullets with drag will use a modified Velocity Verlet with optional substepping
+- Fixed null Rigidbodies potentially getting added to the ignored Rigidbody/Collider lists
+- Updated visuals for drawing thick bullets to better represent their SphereCasts
+- New, simpler .gitignore
+- Many optimizations to hit detection to make the Physics raycasts themselves the bottlenecks
+- Added a little ammo counter to the ammo gun in the demo scenes it's used in
+- Rigidbody movement demo now has the same cursor/movement behavior as the other free camera guns
+- Renamed `Bullet.ExplodeBullet()` to `Bullet.DestroyBulletFromExplosion()` for consistency with the other two Destroy functions
+- Removed deviation from the demo guns with prediction spheres
 
 ### 1.3 (September 22 2021)
 
