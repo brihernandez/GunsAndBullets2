@@ -13,25 +13,32 @@ namespace GNB.Demo
         private void Update()
         {
             if (Input.GetKeyDown(KeyCode.Alpha1))
-                SceneManager.LoadScene(1);
+                LoadScene(1);
             if (Input.GetKeyDown(KeyCode.Alpha2))
-                SceneManager.LoadScene(2);
+                LoadScene(2);
             if (Input.GetKeyDown(KeyCode.Alpha3))
-                SceneManager.LoadScene(3);
+                LoadScene(3);
             if (Input.GetKeyDown(KeyCode.Alpha4))
-                SceneManager.LoadScene(4);
+                LoadScene(4);
             if (Input.GetKeyDown(KeyCode.Alpha5))
-                SceneManager.LoadScene(5);
+                LoadScene(5);
             if (Input.GetKeyDown(KeyCode.Alpha6))
-                SceneManager.LoadScene(6);
+                LoadScene(6);
             if (Input.GetKeyDown(KeyCode.Alpha7))
-                SceneManager.LoadScene(7);
+                LoadScene(7);
             if (Input.GetKeyDown(KeyCode.Alpha8))
-                SceneManager.LoadScene(8);
+                LoadScene(8);
             if (Input.GetKeyDown(KeyCode.Alpha9))
-                SceneManager.LoadScene(9);
+                LoadScene(9);
             if (Input.GetKeyDown(KeyCode.Alpha0))
-                SceneManager.LoadScene(0);
+                LoadScene(10);
+        }
+
+        private void LoadScene(int index)
+        {
+            SceneManager.LoadScene(index);
+            Cursor.visible = true;
+            Cursor.lockState = CursorLockMode.None;
         }
     }
 }
