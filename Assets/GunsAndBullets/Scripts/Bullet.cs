@@ -253,9 +253,9 @@ namespace GNB
         }
 
         /// <summary>
-        /// Explodes the bullet. Typically used for air bursting explosive weapons.
+        /// Destroys the bullet with an explosion. Typically used for air bursting explosive weapons.
         /// </summary>
-        public void ExplodeBullet(Vector3 explodePosition, Quaternion explodeRotation)
+        public void DestroyBulletFromExplosion(Vector3 explodePosition, Quaternion explodeRotation)
         {
             if (ExplodeFXPrefab)
                 Instantiate(ExplodeFXPrefab, explodePosition, explodeRotation).Play();
@@ -293,7 +293,7 @@ namespace GNB
             if (SecondsSinceFired > TimeToLive)
             {
                 if (ExplodeOnTimeout)
-                    ExplodeBullet(transform.position, transform.rotation);
+                    DestroyBulletFromExplosion(transform.position, transform.rotation);
                 else
                     DestroyBulletSilently();
             }
@@ -306,7 +306,7 @@ namespace GNB
                     HandleExplosionDamage(hitInfo.point);
 
                     if (ExplodeOnImpact)
-                        ExplodeBullet(hitInfo.point, transform.rotation);
+                        DestroyBulletFromExplosion(hitInfo.point, transform.rotation);
                     else
                         DestroyBulletFromImpact(hitInfo.point, transform.rotation);
                 }
