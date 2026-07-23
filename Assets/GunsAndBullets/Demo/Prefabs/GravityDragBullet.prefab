@@ -54,6 +54,7 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   TimeToLive: 5
+  UseAccurateBallistics: 1
   Drag: 4
   GravityModifier: 5
   AlignToVelocity: 1

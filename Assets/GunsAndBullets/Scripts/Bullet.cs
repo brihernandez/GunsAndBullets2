@@ -23,6 +23,8 @@ namespace GNB
         public LayerMask RayHitLayers = -1;
         [Tooltip("How long (seconds) the bullet lasts")]
         [Min(0)] public float TimeToLive = 5f;
+        [Tooltip("When disabled, forces the use of simple Euler Method bullets. If you don't care about predicting the impact points of this bullet, then this can make even draggy bullets with gravity very performant. Only affects bullets with gravity and/or drag. This will break impact point prediction!")]
+        public bool UseAccurateBallistics = true;
         [Tooltip("The faster the bullet goes, the harder drag pushes to slow it down. Higher values make for a bullet that slows down faster.")]
         [Min(0)] public float Drag = 0;
         [Tooltip("Gravity applied to the bullet where 1 is normal gravity.")]
@@ -142,7 +144,7 @@ namespace GNB
         {
             float worldGravity = Physics.gravity.y;
 
-            if (GravityModifier > 0 || Drag > 0)
+            if (UseAccurateBallistics && (GravityModifier > 0 || Drag > 0))
             {
                 // Bullets with gravity or drag can be done much more accurately, with much larger
                 // timesteps, using Velocity Verlet.
@@ -182,8 +184,8 @@ namespace GNB
             }
             else
             {
-                // For bullets with no gravity or drag,
-                acceleration = CalculateAcceleration(velocity, 0);
+                // For bullets with no gravity or drag, or bullets that don't care about accurate ballistics.
+                acceleration = CalculateAcceleration(velocity, worldGravity);
                 velocity += acceleration * deltaTime;
                 position += velocity * deltaTime;
             }

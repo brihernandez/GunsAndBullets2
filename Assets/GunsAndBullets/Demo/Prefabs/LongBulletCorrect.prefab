@@ -54,6 +54,8 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 4294967295
   TimeToLive: 5
+  UseAccurateBallistics: 0
+  Drag: 0
   GravityModifier: 0
   AlignToVelocity: 0
   BulletLength: 20

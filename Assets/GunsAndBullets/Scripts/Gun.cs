@@ -245,6 +245,8 @@ namespace GNB
         /// the second value (hitInfo) will be filled out with information on what was hit.</returns>
         public (bool hitSomething, RaycastHit hitInfo) GetPredictedImpactPoint(float timestep, int substeps = 1)
         {
+            Assert.IsTrue(BulletPrefab.UseAccurateBallistics, $"Bullet {BulletPrefab.name} from gun {name} is incompatible with predicted impact points! Set UseAccurateBallistics to true in order to produce usable results.");
+
             var willHitSomething = false;
             var firePoint = FirePoints[firePointIndex % FirePoints.Count];
 
