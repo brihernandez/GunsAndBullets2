@@ -3,10 +3,10 @@ This project is a set of generic gun and bullet components to be futher expanded
 
 The goal of this project was to create a sort of "canonical" version of bullet and gun code that I so frequently write and rewrite. Rather than constantly pulling and gutting code from old projects, it'd be nice to have a single package that I can just import.
 
-There are two ways I usually use this repository:
+There are two ways I usually use this repository/package:
 
 1. I am making a very quick prototype and I don't care that much about how the guns or bullets work. In that case, I just drop the whole package directly into the project and use the guns/bullets directly.
-2. The project I'm working on requires bespoke bullets, but I will often reference the code from this repository and just copy/paste snippets as needed. For me, that's usually the hit detection, and prediction architecture, because I think that's very solid stuff.
+2. The project I'm working on requires bespoke bullets, but I will often reference the code from this repository and just copy/paste snippets as needed.
 
 The code here isn't super-optimized, because the most optimized solution will always be something tailor made for your project and your requirements. However, I did spend some time making sure what's here is reasonably optimized for how flexible they are designed to be. Honestly, as long as you aren't doing something crazy with thousands of bullets flying through the air at once, I am confident in saying that I think this is practically shippable code. Throw some kind of pooling on the bullets, and I would say this *is* shippable.
 
