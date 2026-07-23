@@ -5,8 +5,11 @@ namespace GNB.Demo
 {
     public class DemoSceneChanger : MonoBehaviour
     {
+        private float startFixedTimestep = 0.02f;
+
         private void Awake()
         {
+            startFixedTimestep = Time.fixedDeltaTime;
             DontDestroyOnLoad(gameObject);
         }
 
@@ -32,13 +35,18 @@ namespace GNB.Demo
                 LoadScene(9);
             if (Input.GetKeyDown(KeyCode.Alpha0))
                 LoadScene(10);
+
+            if (Input.GetKeyDown(KeyCode.Escape))
+                Application.Quit();
         }
 
-        private void LoadScene(int index)
+        private async void LoadScene(int index)
         {
             SceneManager.LoadScene(index);
+            await Awaitable.NextFrameAsync(destroyCancellationToken);
             Cursor.visible = true;
             Cursor.lockState = CursorLockMode.None;
+            Time.fixedDeltaTime = startFixedTimestep;
         }
     }
 }
