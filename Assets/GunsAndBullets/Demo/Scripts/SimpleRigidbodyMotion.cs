@@ -13,9 +13,16 @@ namespace GNB.Demo
 
         private void Update()
         {
-            bufferedMouseInput += new Vector3(
-                x: -Input.GetAxis("Mouse Y"),
-                y: Input.GetAxis("Mouse X"));
+            bool isMovementAllowed = Input.GetMouseButton(1);
+
+            Cursor.visible = !isMovementAllowed;
+            Cursor.lockState = isMovementAllowed ? CursorLockMode.Locked : CursorLockMode.None;
+            if (isMovementAllowed)
+            {
+                bufferedMouseInput += new Vector3(
+                    x: -Input.GetAxis("Mouse Y"),
+                    y: Input.GetAxis("Mouse X"));
+            }
         }
 
         private void FixedUpdate()
