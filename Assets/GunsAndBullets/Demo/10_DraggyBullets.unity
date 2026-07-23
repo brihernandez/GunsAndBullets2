@@ -572,7 +572,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   FireDelay: 0.2
   MuzzleVelocity: 200
-  Deviation: 0.1
+  Deviation: 0
   AutoInheritVelocity: 1
   UseGimballedAiming: 0
   GimbalOnlyWhenInRange: 0
