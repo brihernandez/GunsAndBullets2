@@ -45,7 +45,9 @@ namespace GNB
         [Min(0)] public float BulletDiameter = 1f;
 
         [Header("Explosions")]
+        [Tooltip("Causes a damage dealing explosion on impact, in addition to the impact damage.")]
         public bool ExplodeOnImpact = false;
+        [Tooltip("When the bullet times out, it will cause a damage dealing explosion.")]
         public bool ExplodeOnTimeout = false;
 
 #if UNITY_EDITOR
@@ -253,7 +255,7 @@ namespace GNB
         }
 
         /// <summary>
-        /// Destroys the bullet with an explosion. Typically used for air bursting explosive weapons.
+        /// Destroys the bullet with a damage dealing explosion. Typically used for air bursting explosive weapons.
         /// </summary>
         public void DestroyBulletFromExplosion(Vector3 explodePosition, Quaternion explodeRotation)
         {

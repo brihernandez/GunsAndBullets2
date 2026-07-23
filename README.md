@@ -32,7 +32,7 @@ The code here isn't super-optimized, because the most optimized solution will al
 This project was built in **Unity 6000.0.70f1**.
 
 ## Download
-You can either clone the repository or [download the asset package](./GunsAndBullets2.unitypackage?raw=true) located in the root.
+You can either clone the repository or [download the asset package](https://github.com/brihernandez/GunsAndBullets2/raw/refs/heads/master/GunsAndBullets2.unitypackage) located in the root.
 
 # Guns
 ![](Screenshots/gunproperties.png)
@@ -263,6 +263,7 @@ Generally, I don't really recommend you have bullets with drag on them because i
 - Rigidbody movement demo now has the same cursor/movement behavior as the other free camera guns
 - Renamed `Bullet.ExplodeBullet()` to `Bullet.DestroyBulletFromExplosion()` for consistency with the other two Destroy functions
 - Removed deviation from the demo guns with prediction spheres
+- Added tooltips to the `Bullet.ExplodeOnImpact` and `Bullet.ExplodeOnTimeout` to make it clear they are intended to cause damage
 
 ### 1.3 (September 22 2021)
 
