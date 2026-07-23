@@ -252,7 +252,7 @@ namespace GNB
 
             var simPosition = firePoint.position;
             var simVelocity = firePoint.forward * MuzzleVelocity + InheritedVelocity;
-            var simAcceleration = BulletPrefab.CalculateAcceleration(simVelocity);
+            var simAcceleration = BulletPrefab.CalculateAcceleration(simVelocity, Physics.gravity.y);
 
             var simTime = 0f;
             var maxSimTime = BulletPrefab.TimeToLive;

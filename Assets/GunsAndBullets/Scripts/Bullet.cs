@@ -113,17 +113,18 @@ namespace GNB
                 Rigidbody.rotation = finalRotation;
 
             Velocity = (transform.forward * muzzleVelocity) + inheritedVelocity;
-            Acceleration = CalculateAcceleration(Velocity);
+            Acceleration = CalculateAcceleration(Velocity, Physics.gravity.y);
             IsFired = true;
         }
 
-        public Vector3 CalculateAcceleration(Vector3 velocity)
+        public Vector3 CalculateAcceleration(Vector3 velocity, float worldGravity)
         {
             // The drag used here is very basic and not really realistic linear drag, but if you
             // prefer to change the drag model, this is the place to do it.
-            var gravity = Physics.gravity * GravityModifier;
-            var drag = -velocity * Drag;
-            return gravity + drag;
+            return new Vector3(
+                -velocity.x * Drag,
+                -velocity.y * Drag + worldGravity * GravityModifier,
+                -velocity.z * Drag);
         }
 
         /// <summary>
@@ -137,6 +138,8 @@ namespace GNB
         /// accurate the result.</param>
         public (Vector3 position, Vector3 velocity, Vector3 acceleration) CalculateBulletMotion(Vector3 position, Vector3 velocity, Vector3 acceleration, float deltaTime, int substep = 1)
         {
+            float worldGravity = Physics.gravity.y;
+
             if (GravityModifier > 0 || Drag > 0)
             {
                 // Bullets with gravity or drag can be done much more accurately, with much larger
@@ -157,8 +160,8 @@ namespace GNB
                         // velocity. To approximate a changing acceleration (i.e. due to drag), the
                         // acceleration must be predicted next frame which requires a guess of what the
                         // velocity next frame is going to be as well.
-                        var futureAcceleration = CalculateAcceleration(velocity);
-                        var newAcceleration = CalculateAcceleration(velocity + futureAcceleration * substepDeltaTime);
+                        var futureAcceleration = CalculateAcceleration(velocity, worldGravity);
+                        var newAcceleration = CalculateAcceleration(velocity + futureAcceleration * substepDeltaTime, worldGravity);
                         var newVelocity = velocity + (acceleration + newAcceleration) * (substepDeltaTime * 0.5f);
                         velocity = newVelocity;
                         acceleration = newAcceleration;
@@ -168,7 +171,7 @@ namespace GNB
                 {
                     // When a bullet has only gravity, traditional Velocity Verlet is good enough.
                     var newPosition = position + velocity * deltaTime + acceleration * (deltaTime * deltaTime * 0.5f);
-                    var newAcceleration = CalculateAcceleration(velocity);
+                    var newAcceleration = CalculateAcceleration(velocity, worldGravity);
                     var newVelocity = velocity + (acceleration + newAcceleration) * (deltaTime * 0.5f);
                     position = newPosition;
                     velocity = newVelocity;
@@ -178,7 +181,7 @@ namespace GNB
             else
             {
                 // For bullets with no gravity or drag,
-                acceleration = CalculateAcceleration(velocity);
+                acceleration = CalculateAcceleration(velocity, 0);
                 velocity += acceleration * deltaTime;
                 position += velocity * deltaTime;
             }
