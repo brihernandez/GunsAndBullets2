@@ -345,7 +345,7 @@ namespace GNB
         /// <summary>
         /// Checks the ignore list to see if this given hit is allowed.
         /// </summary>
-        private bool IsHitAllowed(RaycastHit hit)
+        private bool IsHitAllowed(in RaycastHit hit)
         {
             bool isHitAllowed = true;
 
@@ -369,7 +369,7 @@ namespace GNB
                 results: raycastHits,
                 layerMask: ThickHitLayers);
 
-            var (bulletHitSomething, closestHit) = GetClosestValidHit(raycastHits, hitCount);
+            var (bulletHitSomething, closestHitIndex) = GetClosestValidHit(raycastHits, hitCount);
             if (!bulletHitSomething)
             {
                 // If the bullet didn't hit anything, then do normal raycast style hit detection
@@ -383,10 +383,10 @@ namespace GNB
                     layerMask: RayHitLayers,
                     results: raycastHits);
 
-                (bulletHitSomething, closestHit) = GetClosestValidHit(raycastHits, hitCount);
+                (bulletHitSomething, closestHitIndex) = GetClosestValidHit(raycastHits, hitCount);
             }
 
-            return (bulletHitSomething, closestHit);
+            return (bulletHitSomething, raycastHits[closestHitIndex]);
         }
 
         private (bool hitSomething, RaycastHit hitInfo) RunRayHitDetection(Vector3 position, Vector3 velocity, float deltaTime)
@@ -398,24 +398,18 @@ namespace GNB
                 layerMask: ThickHitLayers | RayHitLayers,
                 results: raycastHits);
 
-            return GetClosestValidHit(raycastHits, hitCount);
+            var (hitSomething, closestHitIndex) = GetClosestValidHit(raycastHits, hitCount);
+            return (hitSomething, raycastHits[closestHitIndex]);
         }
 
-        private (bool hitSomething, RaycastHit closestHit) GetClosestValidHit(RaycastHit[] listOfHits, int hitCount)
+        private (bool hitSomething, int closestHit) GetClosestValidHit(in RaycastHit[] listOfHits, int hitCount)
         {
             if (hitCount == 0)
-                return (false, listOfHits[0]);
+                return (false, 0);
 
-            RaycastHit closestHit = listOfHits[0];
+            int closestIndex = 0;
             float closestDistance = float.MaxValue;
             bool hitSomething = false;
-
-            if (IsHitAllowed(listOfHits[0]))
-            {
-                closestHit = listOfHits[0];
-                closestDistance = listOfHits[0].distance;
-                hitSomething = true;
-            }
 
             for (int i = 0; i < hitCount; ++i)
             {
@@ -424,13 +418,13 @@ namespace GNB
                     if (listOfHits[i].distance < closestDistance)
                     {
                         closestDistance = listOfHits[i].distance;
-                        closestHit = listOfHits[i];
+                        closestIndex = i;
                         hitSomething = true;
                     }
                 }
             }
 
-            return (hitSomething, closestHit);
+            return (hitSomething, closestIndex);
         }
 
         private void CleanUpTrails()

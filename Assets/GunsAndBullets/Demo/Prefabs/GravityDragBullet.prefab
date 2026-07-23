@@ -55,7 +55,6 @@ MonoBehaviour:
     m_Bits: 4294967295
   TimeToLive: 5
   Drag: 4
-  DragSubsteps: 3
   GravityModifier: 5
   AlignToVelocity: 1
   BulletLength: 2
