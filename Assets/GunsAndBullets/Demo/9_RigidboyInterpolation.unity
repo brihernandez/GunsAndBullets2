@@ -1311,6 +1311,7 @@ MonoBehaviour:
   - {fileID: 1521772039}
   RecoilLength: 0.3
   RecoilRecoverSpeed: 1
+  BarrelRecoilAxis: {x: 0, y: 0, z: -1}
   RecoilingBarrels: []
   FireSound: {fileID: 0}
   BulletPrefab: {fileID: 114839090480401972, guid: e70ddad0cc4964947973c37117ccf32c,
@@ -1364,6 +1365,7 @@ MonoBehaviour:
   - {fileID: 83767526}
   RecoilLength: 0.3
   RecoilRecoverSpeed: 1
+  BarrelRecoilAxis: {x: 0, y: 0, z: -1}
   RecoilingBarrels: []
   FireSound: {fileID: 0}
   BulletPrefab: {fileID: 114839090480401972, guid: 28d075f49810b7f4cb0b0a1117441bd1,
@@ -1393,6 +1395,85 @@ Transform:
   - {fileID: 300176891}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &1124649919
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1124649920}
+  - component: {fileID: 1124649922}
+  - component: {fileID: 1124649921}
+  m_Layer: 5
+  m_Name: Number
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1124649920
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1124649919}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 1489265042}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
+  m_AnchoredPosition: {x: 0, y: 0}
+  m_SizeDelta: {x: -128, y: -128}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1124649921
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1124649919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5f7201a12d95ffc409449d95f23cf332, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_FontData:
+    m_Font: {fileID: 10102, guid: 0000000000000000e000000000000000, type: 0}
+    m_FontSize: 36
+    m_FontStyle: 0
+    m_BestFit: 0
+    m_MinSize: 2
+    m_MaxSize: 40
+    m_Alignment: 6
+    m_AlignByGeometry: 0
+    m_RichText: 1
+    m_HorizontalOverflow: 0
+    m_VerticalOverflow: 0
+    m_LineSpacing: 1
+  m_Text: 9
+--- !u!222 &1124649922
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1124649919}
+  m_CullTransparentMesh: 1
 --- !u!1 &1202174323
 GameObject:
   m_ObjectHideFlags: 0
@@ -1785,6 +1866,7 @@ MonoBehaviour:
   - {fileID: 1376643896}
   RecoilLength: 0.3
   RecoilRecoverSpeed: 1
+  BarrelRecoilAxis: {x: 0, y: 0, z: -1}
   RecoilingBarrels: []
   FireSound: {fileID: 0}
   BulletPrefab: {fileID: 114839090480401972, guid: e4c6a77db6820bc468c414d0c346445d,
@@ -2204,7 +2286,7 @@ MonoBehaviour:
   m_ScaleFactor: 1
   m_ReferenceResolution: {x: 1920, y: 1080}
   m_ScreenMatchMode: 0
-  m_MatchWidthOrHeight: 0
+  m_MatchWidthOrHeight: 1
   m_PhysicalUnit: 3
   m_FallbackScreenDPI: 96
   m_DefaultSpriteDPI: 96
@@ -2247,6 +2329,7 @@ RectTransform:
   m_Children:
   - {fileID: 1416006943}
   - {fileID: 588024114}
+  - {fileID: 1124649920}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -2568,6 +2651,7 @@ MonoBehaviour:
   - {fileID: 35361333}
   RecoilLength: 0.3
   RecoilRecoverSpeed: 1
+  BarrelRecoilAxis: {x: 0, y: 0, z: -1}
   RecoilingBarrels: []
   FireSound: {fileID: 0}
   BulletPrefab: {fileID: 114839090480401972, guid: ec50b11de558e454f82c4b25b7e32e90,
