@@ -259,6 +259,16 @@ Generally, I don't really recommend you have bullets with drag on them because i
 
 # Changelog
 
+### 1.5 (July 23 2026)
+- `RunRayHitDetection()` (thin bullets) only checks against `RayHitLayers` instead of both `RayHitLayers` and `ThickHitLayers`
+- If thick bullets have an empty `ThickHitLayers` mask, `RunRayHitDetection()` will be called instead of `RunThickHitDetection()`
+- If thin bullets have an empty `RayHitLayers` mask, `RunRayHitDetection()` does nothing
+- If thick bullets have an empty `RayHitLayers` mask, `RunThickHitDetection()` will skip the line raycast
+- Added `Bullet.UseAccurateBallistics` option that when false, overrides all the fancy new stuff and falls back on the ultrafast Euler Method, useful for bullets where you don't care about predicted impact points
+- Updated license date
+- Added numbers to the bottom left of the demos
+- Fixed the out of date description on the draggy bullets demo
+
 ### 1.4 (July 23 2026)
 - Updated to Unity 6000.0.70f1
 - When built, demos can switched between with the number keys
