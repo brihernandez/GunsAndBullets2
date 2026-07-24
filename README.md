@@ -84,7 +84,7 @@ The most important functions describing how the bullets work are these three:
 * `RunRayHitDetection`
 * `RunThickHitDetection`
 
-These three functions get used in the `UpdateBullet` function to both move it and detect if the bullet has hit an object. Since these functions **do not** rely on any state information held in the bullet itself, they can be called with any arbitrary starting positions to run the bullet for **one frame**. In normal use, this just means it gets called in the `FixedUpdate` loop, but they can also be used to simulate a hypothetical bullet, its flight path, and a target it may hit.
+These three functions get used in the `UpdateBullet` function to both move it and detect if the bullet has hit an object. Since these functions **do not** rely on any state information held in the bullet itself, they can be called with any arbitrary starting positions to run the bullet for **one frame**. In normal use, this just means it gets called in the `FixedUpdate` loop, but they can also be used to simulate a hypothetical bullet, its flight path, and a point it may hit.
 
 ### CalculateBulletMotion
 Straightforward function for linear bullets with optional gravity and drag modifiers. Anything more is too project-specific, so it's up to you to specify if need be. I find that this type of motion is good enough for the vast majority of cases.
@@ -101,13 +101,20 @@ One of the hit detection methods. This uses a very simple [Raycast](https://docs
 ### CalculateThickHitDetection
 The alternative hit detection method. Instead of a raycast, this uses a [SphereCast](https://docs.unity3d.com/ScriptReference/Physics.SphereCast.html) for hit detection. This method is more expensive, but can be more robust and useful for things such as visibily large bullets or a form of making hit detection more forgiving.
 
-For both optimization and game-design purposes, **thick hit detection only checks layers specified in the bullet's `TargetMask` property**. See the [ThickBullets section](#Thick-Bullets) for more details.
+For both optimization and game-design purposes, **thick hit detection only checks layers specified on the `ThickHitLayers` property**. See the [ThickBullets section](#Thick-Bullets) for more details.
 
 ## Damage
-This project **does not** include any kind of damage system. This is implementation specific, so you will need to add your own code for handling damage. There are two convenient places to place handling damage code marked with `//TODO:` comments.
+This project **does not** include any kind of damage system. This is implementation specific, so you will need to add your own code for handling damage. There are two convenient places to place handling damage code marked with `//TODO:` comments. There are two types of damage:
 
-## Explosions
+### Impact Damage
+Impact damage, to be implemented in the `HandleImpactDamage()` function, is triggered whenever the bullet hits something as defined by `RayHitLayers`.
+
+### Explosion Damage
 Using the `ExplodeOnImpact` and `ExplodeOnTimeout` properties, bullets can be set to explode. Functionality for this is very limited, since the exact needs of an explosion system vary depending on the project. As with damage, it is expected for a user to fill in their own code for handling damage.
+
+Explosion damage is to be implemented in the `HandleExplosionDamage()` function.
+
+Explosion damage is not mutually exclusive with impact damage. If a bullet explodes on impact, it will deal both impact damage **and** explosion damage. This is how I typically handle it, because I like having impacts deal "bonus" damage for explosive weapons, and a purely explosive weapon can still be created by setting impact damage to zero.
 
 Explosions and impacts are configured to use different effects, which can be specified using the `ExplodeFXPrefab` and `ImpactFXPrefab` properties.
 
@@ -125,7 +132,7 @@ If a Rigidbody is added to the bullet, then movement of the bullet will be done 
 The code in this project is very simple. While it is generic enough to cover what I feel is 90% of use cases involving fast bullets, there are some limitations to keep in mind.
 
 1. This solution is designed around bullets that will be traveling at fast speeds relative to their targets. If the targets travel at similar speeds, or faster, than the bullets, then it is possible for the hit detection to be unreliable, particularly when using the ray versions of hit detection.
-2. Neither the bullets, nor the impact effects, are pooled. Pooling is too project specific and opinionated a solution for me to feel comfortable including one in here. If you commonly firing/destroying hundreds of bullets a second, you should consider writing a pooling system for the bullets. The `Bullet.Fire()` and `Bullet.DestroyBulletX()` functions are designed with this in mind, to make it easy to adapt to your project's pooling and reset a bullet's state.
+2. Neither the bullets, nor the impact effects, are pooled. Pooling is too project specific and opinionated a solution for me to feel comfortable including one in here. If you commonly firing/destroying hundreds of bullets a second, you should consider writing a pooling system for the bullets. The `Bullet.Fire()` and `DestroyBulletX()` series of functions are designed with this in mind, to make it easy to adapt to your project's pooling and reset a bullet's state.
 3. For an optimization reason, gravity is only considered in the Y direction. Any gravity in the X or Z components is ignored by bullets with gravity.
 
 # Special Bullet Features
@@ -167,11 +174,15 @@ Keep in mind that the SphereCasts are done **in addition** to normal bullet hit 
 
 A normal bullet uses the `CalculateBulletMotion` and `RunHitDetection` functions to step through its motion and hit detection in a `FixedUpdate` function. Since these functions do **not** rely on the current state of the bullet, they can be used by other classes to simulate a bullet and have it step through all of its normal code, using its properties.
 
-In this project, the `Gun` class has a `GetPredictedImpactPont` function which does exactly this. This simulates a shot from the gun with the guns own parameters, and the bullet prefab that it uses.
+In this project, the `Gun` class has a `GetPredictedImpactPoint()` function which does exactly this. This simulates a shot from the gun with the guns own parameters, and the bullet prefab that it uses.
 
-Since the `GetPredictedImpactPoint` function is using exactly the same hit detection and motion functions that the bullet itself uses, any additions to bullet motion such as complex drag models or hit detection will automatically be used.
+Since the `GetPredictedImpactPoint()` function is using exactly the same hit detection and motion functions that the bullet itself uses, any additions to bullet motion such as complex drag models or hit detection will automatically be used.
 
-The smaller the timestep passed into the `GetPredictedImpactPoint` function, the more accurate the prediction. To get the most accurate prediction, use the same timestep as the [Physics timestep set in Project Settings](https://docs.unity3d.com/Manual/class-TimeManager.html). Be aware that this can become an expensive function, especially for long lasting bullets at low timesteps, since it is essentially running the entire bullet's lifetime in the course of one frame.
+The smaller the timestep passed into the `GetPredictedImpactPoint()` function, the more accurate the prediction. To get the most accurate prediction, use the same timestep as the [Physics timestep set in Project Settings](https://docs.unity3d.com/Manual/class-TimeManager.html). Be aware that this can become an expensive function, especially for long lasting bullets at low timesteps, since it is essentially running the entire bullet's lifetime in the course of one frame.
+
+In order to use Prediction, `UseAccurateBallistics` must be set to true!
+
+Prediction is meant to be used against static objects such as terrain and buildings. It will not predict an impact point against a target in motion.
 
 ```csharp
 while (simTime < maxSimTime && !willHitSomething)
@@ -240,7 +251,7 @@ New in 1.4, bullets can have drag to slow them down. The drag is done through a 
 
 As drag depends on velocity, the [Velocity Verlet](https://en.wikipedia.org/wiki/Verlet_integration#Algorithmic_representation) approach doesn't quite work. When drag is enabled on a bullet, a modified version is used which estimates future velocities and accelerations. This is totally transparent if you aren't messing with the `CalculateBulletMotion()` function, but it's good to be aware of, because draggy bullets are the most expensive thing in this repository.
 
-If you need to predict impact points with draggy bullets, it might be necessary to use **substepping**. The `GunPrediction` component in this scene shows an example of how substeps can be used to increase the accuracy of predictions made with draggy bullets. For bullets with only light drag, the kind you'd see in a realistic environment, it's actually possible to get away with no substepping.
+If you need to predict impact points with draggy bullets, it might be necessary to use **substepping**. The `GunPrediction` component in this scene shows an example of how substeps can be used to increase the accuracy of predictions made with draggy bullets. For bullets with only light drag, the kind you'd see in a realistic environment, it's actually possible to get away with no substepping. The demo uses a very extreme example of bullet drag which really stresses the prediction.
 
 It's also important to note that, for performance reasons, substepping is *only* on the bullet motion, **not** the hit detection. The `Gun.GetPredictedImpactPoint()` takes both a `timestep` and `substep` parameter. The `timestep` defines how long the bullet is simulated between hit detection sweeps. The `substep` defines how many `CalculateBulletMotion()`s run between those hit detection sweeps, providing for much more accurate motion, but without the full impact of also doing too much more hit detection checks. As with most things, experiment to see what values work best, but again, for most things with more realistic amounts of drag, you might be able to get away with no substepping at all.
 
